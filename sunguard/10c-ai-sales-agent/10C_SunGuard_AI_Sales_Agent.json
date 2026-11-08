@@ -1,0 +1,153 @@
+{
+  "name": "10C SunGuard AI Sales Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "f9850d7a-a2ad-4491-af18-499b3b0055cc",
+      "name": "When chat message received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are the SunGuard Sales Assistant for a DEMO solar and CCTV shop in the Philippines.\nReply in the same language the customer uses (English, Tagalog or Taglish). Keep answers short and friendly.\n\nRules:\n- For any question about products, prices or stock, ALWAYS use the \"inventory\" tool first. Never guess.\n- Prices are in Philippine pesos (PHP). Show stock as \"X units available\".\n- Only talk about products with Status = Active.\n- If stock is 0 or lower than what the customer wants, say so and suggest a similar product.\n- To order, tell the customer to use the SunGuard order form on the website.\n- You cannot take payments, change orders or give discounts.\n- This is a demo shop: no real purchases.\n- If you do not know, say so and suggest contacting SunGuard by email."
+        }
+      },
+      "id": "e3edb638-6ef8-4487-b6be-9f6869e6a506",
+      "name": "SunGuard AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash-lite",
+        "options": {}
+      },
+      "id": "f930e6f0-64c5-4b92-9773-d53a51a847ac",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        160,
+        220
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Gemini account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 5
+      },
+      "id": "a24e2128-a8df-42ac-a5b6-59afdff96ab5",
+      "name": "Simple Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        320,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "inventory: Use this to look up SunGuard products, prices (PHP), stock quantity and status.",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "SunGuard_Products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 884383562,
+          "mode": "list",
+          "cachedResultName": "SunGuard_Products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=884383562"
+        },
+        "options": {}
+      },
+      "id": "088c85a0-5644-4941-af83-7ee4af21e135",
+      "name": "inventory",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "position": [
+        480,
+        220
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "SunGuard AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "SunGuard AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "SunGuard AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "inventory": {
+      "ai_tool": [
+        [
+          {
+            "node": "SunGuard AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

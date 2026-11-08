@@ -1,0 +1,281 @@
+{
+  "name": "12 SeaLink Odoo Logistics Daily Brief",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Manual test",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "a1"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "name": "Every day 7 AM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        200
+      ],
+      "id": "a2"
+    },
+    {
+      "parameters": {
+        "resource": "custom",
+        "customResource": "stock.picking",
+        "operation": "getAll",
+        "returnAll": true,
+        "options": {
+          "fieldsList": [
+            "name",
+            "partner_id",
+            "scheduled_date",
+            "origin",
+            "state",
+            "picking_type_code"
+          ]
+        },
+        "filterRequest": {
+          "filter": [
+            {
+              "fieldName": "state",
+              "operator": "!=",
+              "value": "done"
+            },
+            {
+              "fieldName": "state",
+              "operator": "!=",
+              "value": "cancel"
+            }
+          ]
+        }
+      },
+      "name": "Get open transfers",
+      "type": "n8n-nodes-base.odoo",
+      "typeVersion": 1,
+      "position": [
+        240,
+        100
+      ],
+      "id": "a3",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "odooApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Odoo account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "custom",
+        "customResource": "stock.move",
+        "operation": "getAll",
+        "returnAll": true,
+        "options": {
+          "fieldsList": [
+            "picking_id",
+            "product_id",
+            "product_uom_qty",
+            "quantity",
+            "state"
+          ]
+        },
+        "filterRequest": {
+          "filter": [
+            {
+              "fieldName": "state",
+              "operator": "!=",
+              "value": "done"
+            },
+            {
+              "fieldName": "state",
+              "operator": "!=",
+              "value": "cancel"
+            }
+          ]
+        }
+      },
+      "name": "Get open move lines",
+      "type": "n8n-nodes-base.odoo",
+      "typeVersion": 1,
+      "position": [
+        480,
+        100
+      ],
+      "id": "a4",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "odooApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Odoo account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "custom",
+        "customResource": "product.product",
+        "operation": "getAll",
+        "returnAll": true,
+        "options": {
+          "fieldsList": [
+            "default_code",
+            "name",
+            "qty_available",
+            "free_qty"
+          ]
+        },
+        "filterRequest": {
+          "filter": [
+            {
+              "fieldName": "default_code",
+              "operator": "like",
+              "value": "SP-"
+            }
+          ]
+        }
+      },
+      "name": "Get products",
+      "type": "n8n-nodes-base.odoo",
+      "typeVersion": 1,
+      "position": [
+        720,
+        100
+      ],
+      "id": "a5",
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "odooApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Odoo account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Build the SeaLink daily logistics brief from Odoo data\nconst TZ_OFFSET_H = 8; // Philippines (UTC+8)\nconst pickings = $('Get open transfers').all().map(i => i.json).filter(p => p.name);\nconst moves    = $('Get open move lines').all().map(i => i.json).filter(m => m.picking_id);\nconst products = $('Get products').all().map(i => i.json).filter(p => p.default_code);\n\nconst m2o = v => Array.isArray(v) ? v[1] : (v || '');\nconst m2oId = v => Array.isArray(v) ? v[0] : v;\nconst toLocal = s => new Date(new Date(String(s).replace(' ', 'T') + 'Z').getTime() + TZ_OFFSET_H * 3600e3);\nconst fmt = d => d.toUTCString().slice(0, 11); // e.g. \"Mon, 09 Nov\"\nconst now = new Date(Date.now() + TZ_OFFSET_H * 3600e3);\nconst daysAway = s => (toLocal(s) - now) / 86400e3;\n\n// Minimum free stock per item (others default to 3)\nconst MIN = { 'SP-SAF-002': 20, 'SP-NAV-001': 20, 'SP-AE-001': 10, 'SP-DK-002': 5 };\n\nconst lines = [];\nlines.push(`⚓ SeaLink Daily Logistics Brief – ${fmt(now)}`);\nlines.push('Manila Spares Warehouse (demo data)');\n\n// Deliveries to vessels due within 2 days\nconst out = pickings.filter(p => p.picking_type_code === 'outgoing' && daysAway(p.scheduled_date) <= 2)\n                    .sort((a, b) => a.scheduled_date.localeCompare(b.scheduled_date));\nlines.push('');\nlines.push(`🚚 Vessel deliveries due (next 48h): ${out.length}`);\nlet shortCount = 0;\nfor (const p of out) {\n  lines.push(`• ${p.name} → ${m2o(p.partner_id)} | ${p.origin || '-'} | ${fmt(toLocal(p.scheduled_date))}`);\n  for (const m of moves.filter(m => m2oId(m.picking_id) === p.id)) {\n    if ((m.quantity || 0) < m.product_uom_qty) {\n      shortCount++;\n      lines.push(`   ⚠️ SHORT: ${m2o(m.product_id)} – need ${m.product_uom_qty}, reserved ${m.quantity || 0}`);\n    }\n  }\n}\nif (!out.length) lines.push('• None');\n\n// Incoming receipts within 3 days\nconst inc = pickings.filter(p => p.picking_type_code === 'incoming' && daysAway(p.scheduled_date) <= 3);\nlines.push('');\nlines.push(`📦 Incoming from suppliers (next 3 days): ${inc.length}`);\nfor (const p of inc) lines.push(`• ${p.name} ← ${m2o(p.partner_id)} | ${p.origin || '-'} | ${fmt(toLocal(p.scheduled_date))}`);\nif (!inc.length) lines.push('• None');\n\n// Low stock (free quantity at or below minimum)\nconst low = products.filter(p => (p.free_qty ?? p.qty_available) <= (MIN[p.default_code] ?? 3));\nlines.push('');\nlines.push(`🔻 Low stock (free qty ≤ minimum): ${low.length}`);\nfor (const p of low) lines.push(`• [${p.default_code}] ${p.name} – free ${p.free_qty ?? p.qty_available}, min ${MIN[p.default_code] ?? 3}`);\nif (!low.length) lines.push('• None');\n\nlines.push('');\nlines.push(shortCount || low.length ? 'Action: review shortages and raise purchase orders.' : 'All good. No action needed.');\n\nreturn [{ json: { message: lines.join('\\n'), deliveries: out.length, shortages: shortCount, low_stock: low.length } }];\n"
+      },
+      "name": "Build daily brief",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        100
+      ],
+      "id": "a6"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "name": "Telegram brief",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1200,
+        100
+      ],
+      "id": "a7",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual test": {
+      "main": [
+        [
+          {
+            "node": "Get open transfers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every day 7 AM": {
+      "main": [
+        [
+          {
+            "node": "Get open transfers",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get open transfers": {
+      "main": [
+        [
+          {
+            "node": "Get open move lines",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get open move lines": {
+      "main": [
+        [
+          {
+            "node": "Get products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get products": {
+      "main": [
+        [
+          {
+            "node": "Build daily brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build daily brief": {
+      "main": [
+        [
+          {
+            "node": "Telegram brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Manila"
+  },
+  "pinData": {},
+  "active": false
+}

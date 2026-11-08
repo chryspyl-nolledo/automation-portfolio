@@ -1,0 +1,293 @@
+{
+  "name": "05 Fleet Ops daily alert",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        -96
+      ],
+      "id": "650a56fa-7761-4124-8d75-f0c7a06c413d",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Fleet ops data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 891132422,
+          "mode": "list",
+          "cachedResultName": "RightShip",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=891132422"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        -96
+      ],
+      "id": "93f627c3-973c-4cd5-90cd-4a33233d525d",
+      "name": "Read RightShip",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Fleet ops data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1349448833,
+          "mode": "list",
+          "cachedResultName": "Hull",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=1349448833"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        448,
+        -96
+      ],
+      "id": "97357f12-849b-4789-97d1-8b2b05a1ba94",
+      "name": "Read Hull",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Fleet ops data",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 359879189,
+          "mode": "list",
+          "cachedResultName": "Offhire",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=359879189"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        672,
+        -96
+      ],
+      "id": "befcc600-88dd-4528-b2e6-640fb753035a",
+      "name": "Read Offhire",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const DAY = 864e5;\nconst now = new Date();\nconst today = new Date(now.getFullYear(), now.getMonth(), now.getDate());\nconst parse = s => {\n  const [d, t = '00:00'] = String(s).trim().split(' ');\n  const [y, m, dd] = d.split('-').map(Number);\n  const [h, mi] = t.split(':').map(Number);\n  return new Date(y, m - 1, dd, h, mi);\n};\nconst days = (a, b) => Math.round((b - a) / DAY);\nconst usd = n => 'USD ' + Math.round(n).toLocaleString('en-US');\n\n// RightShip: open and overdue or due within 7 days\nconst rs = $('Read RightShip').all().map(i => i.json)\n  .filter(r => String(r.Status).trim() !== 'Closed')\n  .map(r => ({ ...r, left: days(today, parse(r['Due Date'])) }))\n  .filter(r => r.left <= 7)\n  .sort((a, b) => a.left - b.left)\n  .map(r => `- ${r.Vessel} ${r.Ref}: ${r.Observation} – ` +\n    (r.left < 0 ? `OVERDUE by ${-r.left} day${r.left === -1 ? '' : 's'}` : r.left === 0 ? 'due today' : `due in ${r.left} day${r.left === 1 ? '' : 's'}`) +\n    ` (${r['Due Date']})`);\n\n// Hull: 150+ days since cleaning, or 20+ idle days\nconst hull = $('Read Hull').all().map(i => i.json)\n  .map(h => ({ ...h, since: days(parse(h['Last Hull Cleaning']), today), idle: Number(h['Idle Days 30d']) || 0 }))\n  .filter(h => h.since >= 150 || h.idle >= 20)\n  .map(h => `- ${h.Vessel}: ${h.since} days since hull cleaning` +\n    (h.since >= 180 ? ' (OVERDUE)' : h.since >= 150 ? ' (due soon)' : '') +\n    (h.idle >= 20 ? `; ${h.idle} idle days in the last 30 – check fouling` : ''));\n\n// Off-hire: events with no End date are still open\nconst oh = $('Read Offhire').all().map(i => i.json)\n  .filter(o => !String(o.End || '').trim())\n  .map(o => {\n    const d = (now - parse(o.Start)) / DAY;\n    return `- ${o.Vessel}: ${o.Reason} – off-hire since ${o.Start} (${d.toFixed(1)} days, about ${usd(d * Number(o['Hire Rate']))} hire lost)`;\n  });\n\nconst count = rs.length + hull.length + oh.length;\nconst dateStr = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });\nconst section = (title, list) => `${title} (${list.length})\\n${list.length ? list.join('\\n') : '- None'}`;\n\nconst body = [\n  'Good morning,',\n  '',\n  `Fleet Ops daily alert for ${dateStr}:`,\n  '',\n  section('RIGHTSHIP OBSERVATIONS', rs),\n  '',\n  section('HULL CLEANING', hull),\n  '',\n  section('OFF-HIRE', oh),\n  '',\n  'Open the tracker: https://d123alnn5vo5uv.cloudfront.net/fleet-ops-app.html',\n  '',\n  '– Fleet Ops Tracker (automated by n8n)'\n].join('\\n');\n\nconst subject = `Fleet Ops daily alert – ${dateStr}: ${rs.length} RightShip, ${hull.length} hull, ${oh.length} off-hire`;\n\nreturn [{ json: { count, subject, body } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        -96
+      ],
+      "id": "af3c608a-5db4-47c5-9a74-2aa5e7adf31d",
+      "name": "Check rules"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "a7792af0-6d5d-4591-aafb-4300bd6cc788",
+              "leftValue": "={{ $json.count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1120,
+        -96
+      ],
+      "id": "0ad4cb99-5918-44dd-98b7-78e7bbb937b6",
+      "name": "Any alerts"
+    },
+    {
+      "parameters": {
+        "sendTo": "ship@example.com",
+        "subject": "={{ $json.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1344,
+        -96
+      ],
+      "id": "f77366fd-7894-4e55-ad9a-520dcfbba8f3",
+      "name": "Fleet Ops Summary",
+      "webhookId": "WEBHOOK_ID",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Daily 7AM: RightShip, hull cleaning, off-hire sheets → check rules → one digest email (skips if nothing due)."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        512,
+        -256
+      ],
+      "id": "b28081bb-96cc-48f5-b2cc-6fa067e48335",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read RightShip",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read RightShip": {
+      "main": [
+        [
+          {
+            "node": "Read Hull",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Hull": {
+      "main": [
+        [
+          {
+            "node": "Read Offhire",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Offhire": {
+      "main": [
+        [
+          {
+            "node": "Check rules",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check rules": {
+      "main": [
+        [
+          {
+            "node": "Any alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any alerts": {
+      "main": [
+        [
+          {
+            "node": "Fleet Ops Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "1roXwIJX1kvs3NRr",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "tags": [],
+  "pinData": {}
+}

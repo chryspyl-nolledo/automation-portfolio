@@ -1,0 +1,676 @@
+{
+  "name": "10 SunGuard E-commerce Automation",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        0
+      ],
+      "id": "057f8523-6737-4abb-b807-3f2ed3ff3e16",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "SunGuard Test: Connected na ang Telegram notification!",
+        "additionalFields": {
+          "appendAttribution": true
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -432,
+        0
+      ],
+      "id": "29de8e12-c372-4289-8c71-612f3ec1be71",
+      "name": "Send a text message",
+      "webhookId": "WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -656,
+        336
+      ],
+      "id": "d6cb55e7-3864-4c32-9d7e-553cd7b1533d",
+      "name": "When chat message received",
+      "webhookId": "WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Customer question:\n{{ $('When chat message received').first().json.chatInput }}\n\nCurrent SunGuard inventory:\n{{ JSON.stringify($json.products) }}\n\nAnswer using the inventory above.\nUse actual prices and stock quantities.\nNever invent product information.\nDo not confirm orders.",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "You are SunGuard Shop Assistant, a friendly AI customer service representative for a demo solar and CCTV store. Answer customer questions politely and clearly in English or Filipino. You offer solar panels, solar lights, batteries, inverters, and CCTV products. Never invent prices, stock quantities, or order confirmations. If stock or pricing information is unavailable, tell the customer it needs to be checked. Keep responses short and helpful."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        16,
+        224
+      ],
+      "id": "c65bc8dc-3d11-4eab-b446-ddbc8d5e2fa5",
+      "name": "Basic LLM Chain",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.5-flash-lite",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        96,
+        464
+      ],
+      "id": "82f955db-d154-452f-9c7e-e2081fe07e0d",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Gemini account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "SunGuard_Products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 884383562,
+          "mode": "list",
+          "cachedResultName": "SunGuard_Products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=884383562"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -432,
+        336
+      ],
+      "id": "5a0a2172-b54a-4441-b288-d9d4bbe0cc41",
+      "name": "Get row(s) in sheet",
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "products",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        336
+      ],
+      "id": "d726fc42-9808-4783-990d-e9739ef70735",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sunguard-order",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [
+        -832,
+        560
+      ],
+      "id": "4805bcfa-b086-4e60-af74-f05b264082bb",
+      "name": "Webhook",
+      "webhookId": "WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "SunGuard_Products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1739554713,
+          "mode": "list",
+          "cachedResultName": "Orders",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=1739554713"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Order_ID": "={{ 'DEMO-' + $now.toFormat('yyyyMMddHHmmss') }}",
+            "Order_Date": "={{ $now.toFormat('yyyy-MM-dd HH:mm:ss') }}",
+            "Customer_Name": "={{ $('Webhook').first().json.body.customer_name }}",
+            "Customer_Email": "={{ $('Webhook').first().json.body.customer_email }}",
+            "Customer_Phone": "={{ $('Webhook').first().json.body.customer_phone }}",
+            "Product_ID": "={{ $json.Product_ID }}",
+            "Product_Name": "={{ $json.Product_Name }}",
+            "Unit_Price_PHP": "={{ Number($json.Price_PHP) }}",
+            "Total_PHP": "={{ Number($('Webhook').first().json.body.quantity) * Number($json.Price_PHP) }}",
+            "Order_Status": "=Demo - Pending",
+            "Quantity": "={{ Number($('Webhook').first().json.body.quantity) }}",
+            "Stock_Deducted": "No",
+            "Notification_Status": "Pending"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Order_ID",
+              "displayName": "Order_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Order_Date",
+              "displayName": "Order_Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer_Name",
+              "displayName": "Customer_Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer_Email",
+              "displayName": "Customer_Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer_Phone",
+              "displayName": "Customer_Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Product_ID",
+              "displayName": "Product_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Product_Name",
+              "displayName": "Product_Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Quantity",
+              "displayName": "Quantity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Unit_Price_PHP",
+              "displayName": "Unit_Price_PHP",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Total_PHP",
+              "displayName": "Total_PHP",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Order_Status",
+              "displayName": "Order_Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Stock_Deducted",
+              "displayName": "Stock_Deducted",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notification_Status",
+              "displayName": "Notification_Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        16,
+        656
+      ],
+      "id": "88e23d1b-e68e-496e-9034-88fb1c4ece26",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "SunGuard_Products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 884383562,
+          "mode": "list",
+          "cachedResultName": "SunGuard_Products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=884383562"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Product_ID",
+              "lookupValue": "={{ $json.body.product_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -512,
+        592
+      ],
+      "id": "99b3fd85-461b-42e2-9237-63a3186ad078",
+      "name": "Get row(s) in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "e5922cb6-60d3-4c43-b43a-b152a70c03d1",
+              "leftValue": "={{ Number($json.Stock_Qty) }}",
+              "rightValue": "={{ Number($('Webhook').first().json.body.quantity) }}",
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            },
+            {
+              "id": "0dbff36b-50ba-411b-b7c1-448ea9b96cf5",
+              "leftValue": "={{ $json.Status }}",
+              "rightValue": "Active",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "99c6c540-239f-4ae5-8dd1-e1723733d801",
+              "leftValue": "={{ Number.isInteger(Number($('Webhook').first().json.body.quantity)) && Number($('Webhook').first().json.body.quantity) > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "51a9c8e6-7567-4204-be7f-9deb571ee071",
+              "leftValue": "={{ Number($json.Price_PHP) }}",
+              "rightValue": "={{ Number($('Webhook').first().json.body.unit_price) }}",
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "362f2ca2-84e4-458d-b974-ae2f58209931",
+              "leftValue": "={{ $json.Product_Name }}",
+              "rightValue": "={{ $('Webhook').first().json.body.product_name }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        -208,
+        752
+      ],
+      "id": "68cfc8aa-d423-4cc1-89fb-add4dd194999",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "76f35a34-29f3-444e-9957-47ff922a10fa",
+              "name": "message",
+              "value": "={{ 'DEMO ORDER REJECTED: Requested ' + $('Webhook').first().json.body.quantity + ' units of ' + $json.Product_Name + ', but only ' + $json.Stock_Qty + ' units are available.' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        16,
+        848
+      ],
+      "id": "46cf8d29-a289-41ea-b694-18d9afcfdf37",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 422
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        240,
+        848
+      ],
+      "id": "a90bc051-2eb8-4753-9d9f-9edce897fc52",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"success\",\n  \"message\": \"Demo order received and recorded successfully. No real payment or purchase was made.\",\n  \"order_id\": \"{{ $json.Order_ID }}\",\n  \"order_status\": \"Demo - Pending\"\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        240,
+        656
+      ],
+      "id": "9c6998bd-5687-4242-b2c3-cd6c9b9da37a",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=🛒 NEW SUNGUARD DEMO ORDER\n\nOrder ID: {{ $('Append row in sheet').first().json.Order_ID }}\nCustomer: {{ $('Append row in sheet').first().json.Customer_Name }}\nProduct: {{ $('Append row in sheet').first().json.Product_Name }}\nQuantity: {{ $('Append row in sheet').first().json.Quantity }}\nTotal: PHP {{ $('Append row in sheet').first().json.Total_PHP }}\nStatus: Demo - Pending\n\n⚠️ DEMO ONLY — No actual payment or purchase.\n📦 Stock not yet deducted.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        464,
+        656
+      ],
+      "id": "5507de10-454f-420d-a8b1-b61b7995814c",
+      "name": "Send a text message1",
+      "webhookId": "WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        []
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "tags": [],
+  "pinData": {}
+}

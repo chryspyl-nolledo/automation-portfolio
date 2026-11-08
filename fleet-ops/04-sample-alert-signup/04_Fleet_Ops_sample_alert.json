@@ -1,0 +1,265 @@
+{
+  "name": "04 Fleet Ops sample alert",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "1d7354ef-dfce-49e3-94bf-a9aed597a057",
+      "name": "Every 15 min"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "FleetOpsSubscibers",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status",
+              "lookupValue": "Pending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "a2024c3e-d532-4dbb-8bf1-68853fb61c84",
+      "name": "Read pending sign-ups",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.Email }}",
+        "subject": "=Fleet Ops sample alert – {{ $json[\"Alert types\"] }}",
+        "emailType": "text",
+        "message": "=Good day,\n\nThis is your sample alert from the Fleet Ops Tracker demo. \n\nYou signed up for: {{ $json[\"Alert types\"] }}    \n\nRightShip: 1 observation overdue (MV Pacific Star, RS-PS-01), 2 due within 7 days.  \n\nHull cleaning: MV Laguna Bay is overdue (over 180 days);\n\nMV Visayas Trader has 20+ idle days. \n\nOff-hire: MV Laguna Bay still off-hire (main engine breakdown). \n\nIn a real setup this alert is sent every morning to the superintendent and operations team. \n\nYour email has now been removed from the list. \n– Fleet Ops Tracker (automated by n8n)",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "e8138b7b-f79a-4a86-acdf-f3971a527731",
+      "name": "Send sample alert",
+      "webhookId": "WEBHOOK_ID",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "FleetOpsSubscibers",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "Sent",
+            "row_number": "={{ $('Read pending sign-ups').item.json.row_number }}",
+            "Email": "(deleted)"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Alert types",
+              "displayName": "Alert types",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        672,
+        0
+      ],
+      "id": "af299c35-ecf9-4b8e-a366-a7f9f08ff8cc",
+      "name": "Mark sent, delete email",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Every 15 min: website sign-ups (Pending) → sample alert email → mark Sent, delete email."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        256,
+        -128
+      ],
+      "id": "904cae79-3102-4a29-be05-4d1ea48c2ceb",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Every 15 min": {
+      "main": [
+        [
+          {
+            "node": "Read pending sign-ups",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read pending sign-ups": {
+      "main": [
+        [
+          {
+            "node": "Send sample alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send sample alert": {
+      "main": [
+        [
+          {
+            "node": "Mark sent, delete email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "1roXwIJX1kvs3NRr",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "tags": [],
+  "pinData": {}
+}

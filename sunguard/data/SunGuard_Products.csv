@@ -1,0 +1,9 @@
+﻿Product_ID,Product_Name,Category,Price_PHP,Stock_Qty,Low_Stock_Threshold,Status
+SG-001,100W Solar Panel,Solar Panel,3500,15,5,Active
+SG-002,200W Solar Panel,Solar Panel,6500,8,5,Active
+SG-003,Solar Battery 12V 100Ah,Battery,7500,10,3,Active
+SG-004,1000W Solar Inverter,Inverter,4800,6,3,Active
+SG-005,Solar Flood Light 100W,Solar Light,1800,20,5,Active
+SG-006,CCTV Outdoor Camera,CCTV,1800,20,5,Active
+SG-007,CCTV 4-Channel DVR,CCTV,3200,4,3,Active
+SG-008,CCTV Power Supply,CCTV Accessory,650,12,5,Active

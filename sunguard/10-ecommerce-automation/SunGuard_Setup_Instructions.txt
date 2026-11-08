@@ -1,0 +1,12 @@
+SunGuard demo: website form -> Google Apps Script -> Orders sheet -> n8n local polling.
+
+1. Existing SunGuard_Products spreadsheet must contain two tabs:
+   - SunGuard_Products: Product_ID, Product_Name, Category, Price_PHP, Stock_Qty, Low_Stock_Threshold, Status
+   - Orders columns (exact order): Order_ID, Order_Date, Customer_Name, Customer_Email, Customer_Phone, Product_ID, Product_Name, Quantity, Unit_Price_PHP, Total_PHP, Order_Status, Stock_Deducted, Notification_Status
+2. Spreadsheet > Extensions > Apps Script > paste Code.gs. Check project timezone Asia/Manila.
+3. Deploy > New deployment > Web App; Execute as Me; Who has access: Anyone. Copy the URL ending /exec.
+4. Replace PASTE_YOUR_APPS_SCRIPT_WEB_APP_EXEC_URL_HERE in sunguard-order.html with the /exec URL.
+5. First test HTML locally, then verify new row in Orders. Do NOT assume success based solely on webpage success wording because fetch(no-cors) is opaque.
+6. n8n: Schedule Trigger (Every Minute) -> Google Sheets Get Row(s) Orders filter Order_Status = New -> look up and validate product in SunGuard_Products -> derive price only from inventory -> update row once -> send Telegram message. Change existing 10A/10B trigger/logic as needed; this is NOT automatically wired by these two files.
+7. Keep n8n local: runs while laptop + n8n are on, processes queued sheet rows afterward if every run reads all New rows. Prevent duplicates and race conditions before enabling automated deductions. Do NOT simply run existing 10B repeatedly against same hardcoded order ID.
+8. This public demo form is not a secure production checkout: public Apps Script can be spammed; a honeypot is not authentication. Store only fake contact data and avoid real customer PII. Apps Script URL is public, even if it only writes to demo Orders sheet.

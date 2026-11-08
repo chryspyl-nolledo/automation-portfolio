@@ -1,0 +1,15 @@
+Name,Internal Reference,Product Type,Track Inventory,Cost,Sales Price
+Main Engine Fuel Injector Nozzle,SP-ME-001,Goods,True,18500,23000
+Main Engine Cylinder Head Gasket,SP-ME-002,Goods,True,6500,8200
+Aux Engine Fuel Filter Element,SP-AE-001,Goods,True,1200,1600
+Fuel Oil Purifier Gasket Kit,SP-PUR-001,Goods,True,4800,6200
+Air Compressor Valve Plate Set,SP-AC-001,Goods,True,9500,12000
+Seawater Pump Mechanical Seal,SP-PMP-001,Goods,True,7200,9300
+Hydraulic Oil ISO VG 68 (200L Drum),SP-LUB-001,Goods,True,32000,39000
+Mooring Rope 64mm x 220m Coil,SP-DK-001,Goods,True,85000,105000
+Wire Rope Grease 18kg Pail,SP-DK-002,Goods,True,3800,4900
+Fire Hose 2.5in x 20m with Couplings,SP-SAF-001,Goods,True,5200,6800
+SOLAS Lifejacket (Adult),SP-SAF-002,Goods,True,2900,3800
+SCBA Air Cylinder 6.8L,SP-SAF-003,Goods,True,14500,18500
+Portable Gas Detector O2 Sensor,SP-ELC-001,Goods,True,6800,8800
+Navigation Light Bulb 24V 60W,SP-NAV-001,Goods,True,450,650

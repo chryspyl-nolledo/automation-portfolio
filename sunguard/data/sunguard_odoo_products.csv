@@ -1,0 +1,9 @@
+Name,Internal Reference,Product Type,Track Inventory,Cost,Sales Price,Company
+100W Solar Panel,SG-001,Goods,True,2450,3500,"SunGuard Solar & CCTV (Demo)"
+200W Solar Panel,SG-002,Goods,True,4550,6500,"SunGuard Solar & CCTV (Demo)"
+Solar Battery 12V 100Ah,SG-003,Goods,True,5250,7500,"SunGuard Solar & CCTV (Demo)"
+1000W Solar Inverter,SG-004,Goods,True,3360,4800,"SunGuard Solar & CCTV (Demo)"
+Solar Flood Light 100W,SG-005,Goods,True,1260,1800,"SunGuard Solar & CCTV (Demo)"
+CCTV Outdoor Camera,SG-006,Goods,True,1260,1800,"SunGuard Solar & CCTV (Demo)"
+CCTV 4-Channel DVR,SG-007,Goods,True,2240,3200,"SunGuard Solar & CCTV (Demo)"
+CCTV Power Supply,SG-008,Goods,True,455,650,"SunGuard Solar & CCTV (Demo)"

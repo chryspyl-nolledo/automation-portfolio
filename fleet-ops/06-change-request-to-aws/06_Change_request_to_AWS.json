@@ -1,0 +1,140 @@
+{
+  "name": "06 Change request to AWS.",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "from:ship@example.com subject:\"Change Request\" has:attachment"
+        },
+        "options": {
+          "downloadAttachments": true
+        }
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b2c55e73-11ac-422e-8fa5-eec78f7076f6",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "bucketName": "your-bucket-name",
+        "fileName": "={{ $now.toFormat('yyyyMMdd-HHmmss') }}-{{ $binary.attachment_0.fileName }}",
+        "binaryPropertyName": "=attachment_0",
+        "additionalFields": {
+          "parentFolderKey": "incoming"
+        }
+      },
+      "type": "n8n-nodes-base.awsS3",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "3841e77f-34d4-4095-916b-68e8f47829dc",
+      "name": "Upload a file",
+      "credentials": {
+        "aws": {
+          "id": "CREDENTIAL_ID",
+          "name": "Credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "emailType": "text",
+        "message": "=Good day,\n\nYour change request attachment has been received and logged.\n\nFile: {{ $json.Key }}\nStatus: Uploaded to the PMS document store. The parts list is read automatically (Amazon Textract) and saved to the spare parts database.\n\nThe office will review it and update the spare parts list.\n\n– Fleet Office (automated by n8n)",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "fae4f647-1368-4a16-8292-0b26b967a3e0",
+      "name": "Reply to a message",
+      "webhookId": "WEBHOOK_ID",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Change request → AWS. Ship emails a parts list → uploaded to S3 incoming/ → Lambda + Textract read it → DynamoDB → reply to ship. IAM user: upload-only."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        128,
+        -176
+      ],
+      "id": "6631dcc8-a983-4deb-b101-dee0dc041ad2",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Upload a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload a file": {
+      "main": [
+        [
+          {
+            "node": "Reply to a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "1roXwIJX1kvs3NRr",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "tags": [],
+  "pinData": {}
+}

@@ -1,0 +1,300 @@
+{
+  "name": "02 Fleet PMS reminder",
+  "nodes": [
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.daysLeft }}",
+                    "rightValue": 0,
+                    "operator": {
+                      "type": "number",
+                      "operation": "lt"
+                    },
+                    "id": "a39fc0d0-b6bc-48a8-96d4-7d99e06d2afb"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Overdue"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "47bf6b2d-b799-4aa2-8f48-112bcc2e5ccc",
+                    "leftValue": "={{ $json.daysLeft }}",
+                    "rightValue": 7,
+                    "operator": {
+                      "type": "number",
+                      "operation": "lte"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Due soon"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Ok"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.5,
+      "position": [
+        160,
+        128
+      ],
+      "id": "3829cc4f-b298-4c40-acb5-85f237611b4a",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -512,
+        144
+      ],
+      "id": "a4ee07fa-a1b1-4601-8fa2-c036dd7f295d",
+      "name": "Every day 7AM"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Fleet PMS",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -288,
+        144
+      ],
+      "id": "6e931c35-1e23-4a58-a5e2-813c2e5b8b28",
+      "name": "Read Fleet PMS",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "515a091e-12d8-4567-b776-a7b54248cadf",
+              "name": "daysLeft",
+              "value": "={{ DateTime.fromISO($json[\"Due Date\"]).diff($now.startOf('day'), 'days').days }}",
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -64,
+        144
+      ],
+      "id": "7ab1a57d-d521-4726-b1a5-60f0277d672a",
+      "name": "Compute days left"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json['Supt Email'] }}",
+        "subject": "=OVERDUE: {{ $json.Vessel }} – {{ $json.Item }}",
+        "emailType": "text",
+        "message": "=Good day Superintendent,\n\nPMS job is OVERDUE:  \nVessel: {{ $json.Vessel }} \nJob: {{ $json.Job }} – {{ $json.Item }} \nDue date: {{ $json[\"Due Date\"] }} ({{ Math.abs($json.daysLeft) }} day{{ Math.abs($json.daysLeft) === 1 ? '' : 's' }} overdue) \nResponsible: {{ $json.Responsible }}  \n\nPlease follow up with the vessel. \n\n– Fleet PMS Reminder (automated by n8n)",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        384,
+        -48
+      ],
+      "id": "52aeebfc-60d3-4c46-a246-dc396ccad987",
+      "name": "Email Supt – Overdue",
+      "webhookId": "WEBHOOK_ID",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json[\"Supt Email\"] }}",
+        "subject": "=DUE SOON: {{ $json.Vessel }} – {{ $json.Item }}",
+        "emailType": "text",
+        "message": "=Good day Chief Officer,  \n\nPMS job is DUE SOON: \n\nVessel: {{ $json.Vessel }} \nJob: {{ $json.Job }} – {{ $json.Item }}\nDue date: {{ $json[\"Due Date\"] }} ({{ $json.daysLeft === 0 ? 'due today' : 'in ' + $json.daysLeft + ($json.daysLeft === 1 ? ' day' : ' days') }}) \nResponsible: {{ $json.Responsible }} \n\nPlease plan this job.\n\n– Fleet PMS Reminder (automated by n8n)",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        400,
+        144
+      ],
+      "id": "98cc1b90-03ef-4af9-8afb-885db493661c",
+      "name": "Email C/O – Due soon",
+      "webhookId": "WEBHOOK_ID",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        384,
+        288
+      ],
+      "id": "a6bc5ae7-774f-46c7-b6d8-e846563a6b1b",
+      "name": "OK"
+    },
+    {
+      "parameters": {
+        "content": "Daily 7AM: reads PMS sheet → overdue / due soon → email."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        -48
+      ],
+      "id": "becc9ed9-edee-4f5a-beb7-d6c39ca504e0",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Email Supt – Overdue",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email C/O – Due soon",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every day 7AM": {
+      "main": [
+        [
+          {
+            "node": "Read Fleet PMS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Fleet PMS": {
+      "main": [
+        [
+          {
+            "node": "Compute days left",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute days left": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "1roXwIJX1kvs3NRr",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "tags": [],
+  "pinData": {}
+}

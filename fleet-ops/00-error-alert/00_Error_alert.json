@@ -1,0 +1,79 @@
+{
+  "name": "00 Error alert.",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "655afea1-8a81-41d3-94a8-d5ad1ebf2752",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "sendTo": "office@example.com",
+        "subject": "=⚠ n8n failed: {{ $json.workflow.name }}",
+        "emailType": "text",
+        "message": "=An automation failed and needs attention. \nWorkflow: {{ $json.workflow.name }} \nFailed node: {{ $json.execution.lastNodeExecuted }} \nError: {{ $json.execution.error.message }} \nTime: {{ $now.toFormat('yyyy-MM-dd HH:mm') }}  \nOpen the execution: {{ $json.execution.url }}  – n8n error monitor",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "8233abb5-ddfe-451d-9d82-c339194d487f",
+      "name": "Send a message",
+      "webhookId": "WEBHOOK_ID",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "CREDENTIAL_ID",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "Any workflow fails → email with workflow, node and error."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        32,
+        -160
+      ],
+      "id": "75c185eb-2950-4554-8fad-3e0c1c170fcf",
+      "name": "Sticky Note"
+    }
+  ],
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "tags": [],
+  "pinData": {}
+}

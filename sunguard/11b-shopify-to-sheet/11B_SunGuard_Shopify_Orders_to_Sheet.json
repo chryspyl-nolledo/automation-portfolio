@@ -1,0 +1,375 @@
+{
+  "name": "11B SunGuard Shopify Orders to Sheet",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "5c50ddab-3f95-494c-951c-0c54a9836a47",
+      "name": "Manual test",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "5c16aa0f-4af8-4ed6-88d3-9eec1a078845",
+      "name": "Every 15 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "SunGuard_Products"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1739554713,
+          "mode": "list",
+          "cachedResultName": "Orders"
+        },
+        "options": {}
+      },
+      "id": "b165d774-2e40-4202-a88f-9b80ad6c36ce",
+      "name": "Get existing orders",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        240,
+        100
+      ],
+      "alwaysOutputData": true,
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://YOUR-STORE.myshopify.com/admin/api/2026-10/graphql.json",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "shopifyOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"query\": \"{ orders(first: 20, reverse: true) { edges { node { name createdAt displayFinancialStatus displayFulfillmentStatus lineItems(first: 20) { edges { node { title sku quantity originalUnitPriceSet { shopMoney { amount } } } } } } } } }\"}",
+        "options": {}
+      },
+      "id": "31bbd015-2486-4fd5-83e8-e491ec509639",
+      "name": "Get Shopify orders",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        100
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "shopifyOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Shopify account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Turn each Shopify order line into one Orders-tab row, and skip rows already in the sheet\nconst existing = new Set($('Get existing orders').all().map(i => String(i.json.Order_ID || '')));\nconst edges = $('Get Shopify orders').first().json.data?.orders?.edges || [];\nconst out = [];\nfor (const e of edges) {\n  const o = e.node;\n  for (const le of (o.lineItems?.edges || [])) {\n    const li = le.node;\n    const id = `SHOPIFY-${o.name.replace('#','')}-${li.sku || 'NOSKU'}`;\n    if (existing.has(id)) continue;\n    const unit = Number(li.originalUnitPriceSet?.shopMoney?.amount || 0);\n    out.push({ json: {\n      Order_ID: id,\n      Order_Date: o.createdAt.replace('T',' ').slice(0,19),\n      Customer_Name: 'Shopify customer',\n      Customer_Email: '',\n      Customer_Phone: '',\n      Product_ID: li.sku || '',\n      Product_Name: li.title,\n      Quantity: li.quantity,\n      Unit_Price_PHP: unit,\n      Total_PHP: unit * li.quantity,\n      Order_Status: `Shopify - ${o.displayFinancialStatus}`,\n      Stock_Deducted: 'By Shopify',\n      Notification_Status: 'Sent',\n      Shopify_Order: o.name\n    }});\n  }\n}\nreturn out;"
+      },
+      "id": "7175562f-b4f8-43cf-b4d2-d5a35a79e8d1",
+      "name": "New order lines only",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "SunGuard_Products"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1739554713,
+          "mode": "list",
+          "cachedResultName": "Orders"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Order_ID": "={{ $json.Order_ID }}",
+            "Order_Date": "={{ $json.Order_Date }}",
+            "Customer_Name": "={{ $json.Customer_Name }}",
+            "Customer_Email": "={{ $json.Customer_Email }}",
+            "Customer_Phone": "={{ $json.Customer_Phone }}",
+            "Product_ID": "={{ $json.Product_ID }}",
+            "Product_Name": "={{ $json.Product_Name }}",
+            "Quantity": "={{ $json.Quantity }}",
+            "Unit_Price_PHP": "={{ $json.Unit_Price_PHP }}",
+            "Total_PHP": "={{ $json.Total_PHP }}",
+            "Order_Status": "={{ $json.Order_Status }}",
+            "Stock_Deducted": "={{ $json.Stock_Deducted }}",
+            "Notification_Status": "={{ $json.Notification_Status }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Order_ID",
+              "displayName": "Order_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Order_Date",
+              "displayName": "Order_Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer_Name",
+              "displayName": "Customer_Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer_Email",
+              "displayName": "Customer_Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer_Phone",
+              "displayName": "Customer_Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Product_ID",
+              "displayName": "Product_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Product_Name",
+              "displayName": "Product_Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Quantity",
+              "displayName": "Quantity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Unit_Price_PHP",
+              "displayName": "Unit_Price_PHP",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Total_PHP",
+              "displayName": "Total_PHP",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Order_Status",
+              "displayName": "Order_Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Stock_Deducted",
+              "displayName": "Stock_Deducted",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notification_Status",
+              "displayName": "Notification_Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "813d0fe0-6b97-410f-a244-6fdc787826c7",
+      "name": "Add to Orders tab",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        960,
+        100
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=🛒 NEW SHOPIFY ORDER (demo)\n\nOrder: {{ $('New order lines only').item.json.Shopify_Order }}\nProduct: {{ $('New order lines only').item.json.Product_Name }} ({{ $('New order lines only').item.json.Product_ID }})\nQty: {{ $('New order lines only').item.json.Quantity }}\nTotal: PHP {{ $('New order lines only').item.json.Total_PHP }}\nStatus: {{ $('New order lines only').item.json.Order_Status }}\n\nSource: Shopify dev store · demo only",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "db3dea94-a64d-425b-8c97-9c39e8c0f4f3",
+      "name": "Telegram alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1200,
+        100
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual test": {
+      "main": [
+        [
+          {
+            "node": "Get existing orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 15 minutes": {
+      "main": [
+        [
+          {
+            "node": "Get existing orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get existing orders": {
+      "main": [
+        [
+          {
+            "node": "Get Shopify orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Shopify orders": {
+      "main": [
+        [
+          {
+            "node": "New order lines only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "New order lines only": {
+      "main": [
+        [
+          {
+            "node": "Add to Orders tab",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add to Orders tab": {
+      "main": [
+        [
+          {
+            "node": "Telegram alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

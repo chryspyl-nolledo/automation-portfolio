@@ -1,0 +1,828 @@
+{
+  "name": "10B SunGuard AUTO Orders - SAFE PREVIEW IMPORT",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "aaee46ef-d043-431f-a3e4-7b315976fb94",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        192
+      ],
+      "notesInFlow": true,
+      "notes": "Manual only. This workflow is not on a schedule."
+    },
+    {
+      "parameters": {
+        "jsCode": "// SAFE IMPORT: Keep dry_run:true until the full scheduled branch is reviewed.\n// On the scheduled branch the ID comes from the New order; manual test keeps an example ID.\nconst incoming = $input.first().json || {};\nconst order_id = String(incoming.Order_ID || incoming.order_id || 'DEMO-20261105130312').trim();\nif (!order_id) throw new Error('Missing Order ID');\nreturn [{json:{order_id,dry_run:false}}];"
+      },
+      "id": "ebc9dce1-1b1a-487a-a7f4-115554b31764",
+      "name": "CONFIG - DRY RUN TRUE",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        192
+      ],
+      "notesInFlow": true,
+      "notes": "SAFE MODE ON. Dynamic New order from polling; manual trigger fallback uses completed example. Change dry_run only after review."
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "SunGuard_Products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1739554713,
+          "mode": "list",
+          "cachedResultName": "Orders",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=1739554713"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Order_ID",
+              "lookupValue": "={{ $('CONFIG - DRY RUN TRUE').first().json.order_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8b0fb30e-dedd-4f8d-92ed-93817a3a7dc8",
+      "name": "Find Confirmed Order",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        464,
+        192
+      ],
+      "settings": {
+        "alwaysOutputData": true
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows=$input.all().map(x=>x.json).filter(x=>x.Order_ID);\nif(rows.length!==1)throw new Error('Expected one matching order; got '+rows.length);\nconst o=rows[0];\nconst status=String(o.Order_Status??'').trim();\nif(!['New','Demo - Confirmed'].includes(status))throw new Error('Order status not eligible: '+status);\nif(String(o.Stock_Deducted??'').trim().toLowerCase()!=='no')throw new Error('Order already deducted or flag is not No');\nconst qty=Number(o.Quantity);\nif(!Number.isSafeInteger(qty)||qty<1||qty>20)throw new Error('Quantity outside 1–20');\nif(!String(o.Product_ID??'').trim())throw new Error('Missing Product_ID');\nreturn [{json:{order_id:String(o.Order_ID),product_id:String(o.Product_ID),quantity:qty,dry_run:$('CONFIG - DRY RUN TRUE').first().json.dry_run}}];"
+      },
+      "id": "2ea11349-2e30-4fa8-9f13-3440aa70fe41",
+      "name": "Validate Order",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        704,
+        192
+      ],
+      "notesInFlow": true,
+      "notes": "Blocks already-deducted, pending and invalid orders before any change."
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "SunGuard_Products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 884383562,
+          "mode": "list",
+          "cachedResultName": "SunGuard_Products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=884383562"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "={{ 'Product_ID' }}",
+              "lookupValue": "={{ $('Validate Order').first().json.product_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c5ecaf60-63d1-4be8-82ae-7a0bb87e8197",
+      "name": "Find Inventory Product",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        960,
+        192
+      ],
+      "settings": {
+        "alwaysOutputData": true
+      },
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows=$input.all().map(x=>x.json).filter(x=>x.Product_ID);\nif(rows.length!==1)throw new Error('Expected one matching product; got '+rows.length);\nconst p=rows[0],order=$('Validate Order').first().json;\nconst stock=Number(p.Stock_Qty),threshold=Number(p.Low_Stock_Threshold),qty=order.quantity;\nconst price=Number(p.Price_PHP);\nif(!Number.isSafeInteger(stock)||stock<0||!Number.isFinite(threshold)||threshold<0)throw new Error('Invalid stock/threshold');\nif(!Number.isFinite(price)||price<0)throw new Error('Invalid inventory price');\nif(stock<qty)throw new Error('Not enough stock: '+stock+' available, '+qty+' ordered');\nif(String(p.Status??'').trim()!=='Active')throw new Error('Product not active');\nconst remaining=stock-qty;\nreturn [{json:{order_id:order.order_id,product_id:order.product_id,product_name:String(p.Product_Name??''),quantity:qty,unit_price:price,total_php:price*qty,old_stock:stock,new_stock:remaining,threshold,low_stock:remaining<=threshold,dry_run:order.dry_run}}];"
+      },
+      "id": "5aae1933-fb9e-4efa-aaab-7c2357bf37ed",
+      "name": "Calculate Safe Deduction",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        192
+      ],
+      "notesInFlow": true,
+      "notes": "Checks current inventory and calculates remaining stock. No write yet."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "76dbdd3a-fd03-45f2-9f7b-4943cc266cb1",
+              "leftValue": "={{ $json.dry_run }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f858e1a0-4f16-45b4-9da5-ca67792536dc",
+      "name": "DRY RUN?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1488,
+        192
+      ],
+      "notesInFlow": true,
+      "notes": "TRUE -> preview only. FALSE -> updates Google Sheets."
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(x=>({json:{...x.json,preview:'DRY RUN: NO GOOGLE SHEETS CHANGES',next:'After review set dry_run:false in CONFIG and run once.'}}));"
+      },
+      "id": "08385dcc-5741-4160-9ea8-69af86417cec",
+      "name": "PREVIEW ONLY - NO WRITES",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1744,
+        0
+      ],
+      "notesInFlow": true,
+      "notes": "Safe place to verify stock calculation before changing real rows."
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "SunGuard_Products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 884383562,
+          "mode": "list",
+          "cachedResultName": "SunGuard_Products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=884383562"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Product_ID": "={{ $json.product_id }}",
+            "Stock_Qty": "={{ $json.new_stock }}"
+          },
+          "matchingColumns": [
+            "Product_ID"
+          ],
+          "schema": [
+            {
+              "id": "Product_ID",
+              "displayName": "Product_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Product_Name",
+              "displayName": "Product_Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Price_PHP",
+              "displayName": "Price_PHP",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Stock_Qty",
+              "displayName": "Stock_Qty",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Low_Stock_Threshold",
+              "displayName": "Low_Stock_Threshold",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "cd7a5b26-71e6-4c1f-8c3b-886171505bd6",
+      "name": "UPDATE Inventory Stock",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1744,
+        192
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "SunGuard_Products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1739554713,
+          "mode": "list",
+          "cachedResultName": "Orders",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=1739554713"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Order_ID": "={{ $('Calculate Safe Deduction').first().json.order_id }}",
+            "Stock_Deducted": "Yes",
+            "Product_Name": "={{ $('Calculate Safe Deduction').first().json.product_name }}",
+            "Unit_Price_PHP": "={{ $('Calculate Safe Deduction').first().json.unit_price }}",
+            "Total_PHP": "={{ $('Calculate Safe Deduction').first().json.total_php }}",
+            "Order_Status": "Demo - Confirmed"
+          },
+          "matchingColumns": [
+            "Order_ID"
+          ],
+          "schema": [
+            {
+              "id": "Order_ID",
+              "displayName": "Order_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Order_Date",
+              "displayName": "Order_Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Customer_Name",
+              "displayName": "Customer_Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Customer_Email",
+              "displayName": "Customer_Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Customer_Phone",
+              "displayName": "Customer_Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Product_ID",
+              "displayName": "Product_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Product_Name",
+              "displayName": "Product_Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Quantity",
+              "displayName": "Quantity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Unit_Price_PHP",
+              "displayName": "Unit_Price_PHP",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Total_PHP",
+              "displayName": "Total_PHP",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Order_Status",
+              "displayName": "Order_Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Stock_Deducted",
+              "displayName": "Stock_Deducted",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Notification_Status",
+              "displayName": "Notification_Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "b2167e74-e667-4c34-99ae-56abd6b59fc6",
+      "name": "MARK Order Deducted",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2000,
+        192
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "notes": "After inventory update: mark Stock_Deducted Yes, demo-confirmed, product name and server-side price."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "390cf945-04e2-44a2-a20e-34449ab7d8f5",
+              "leftValue": "={{ $('Calculate Safe Deduction').first().json.low_stock }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a5c94b00-5045-461c-8521-233bccfda3b1",
+      "name": "LOW STOCK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2272,
+        304
+      ],
+      "notesInFlow": true,
+      "notes": "Alerts only after both updates succeed."
+    },
+    {
+      "parameters": {
+        "chatId": "REPLACE_WITH_YOUR_CHAT_ID",
+        "text": "=⚠️ SUNGUARD LOW STOCK (DEMO)\nProduct: {{ $('Calculate Safe Deduction').first().json.product_name }}\nOld stock: {{ $('Calculate Safe Deduction').first().json.old_stock }}\nDeducted: {{ $('Calculate Safe Deduction').first().json.quantity }}\nRemaining: {{ $('Calculate Safe Deduction').first().json.new_stock }}\nThreshold: {{ $('Calculate Safe Deduction').first().json.threshold }}\nOrder: {{ $('Calculate Safe Deduction').first().json.order_id }}",
+        "additionalFields": {}
+      },
+      "id": "e8235b53-c3dc-422b-8d57-fbc4cd715d3b",
+      "name": "TELEGRAM Low Stock Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2512,
+        192
+      ],
+      "notesInFlow": true,
+      "settings": {
+        "onError": "continueRegularOutput"
+      },
+      "webhookId": "WEBHOOK_ID",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      },
+      "notes": "Choose existing Telegram credentials and enter Chat ID."
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{json:{...$('Calculate Safe Deduction').first().json,result:'Stock changed and order marked deducted. Low stock alert not required.'}}];"
+      },
+      "id": "52546933-b32e-4103-9c86-050acecbc351",
+      "name": "DONE - stock updated",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2528,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "8c58ac46-41d0-4a33-843c-1da663550dc5",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        592
+      ],
+      "notesInFlow": true,
+      "notes": "Runs once/minute when published. DO NOT PUBLISH until testing."
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "SunGuard_Products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1739554713,
+          "mode": "list",
+          "cachedResultName": "Orders",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=1739554713"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Order_Status",
+              "lookupValue": "New"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "id": "05f851a6-100e-44b4-80ff-a419fd5d6597",
+      "name": "Get NEW Orders",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        256,
+        592
+      ],
+      "notesInFlow": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      },
+      "notes": "Read ONLY the first New order each minute; next is processed in a later poll after status changes. Requires your existing Google Sheets credential."
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "CONFIG - DRY RUN TRUE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CONFIG - DRY RUN TRUE": {
+      "main": [
+        [
+          {
+            "node": "Find Confirmed Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Confirmed Order": {
+      "main": [
+        [
+          {
+            "node": "Validate Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Order": {
+      "main": [
+        [
+          {
+            "node": "Find Inventory Product",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Inventory Product": {
+      "main": [
+        [
+          {
+            "node": "Calculate Safe Deduction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Safe Deduction": {
+      "main": [
+        [
+          {
+            "node": "DRY RUN?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UPDATE Inventory Stock": {
+      "main": [
+        [
+          {
+            "node": "MARK Order Deducted",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MARK Order Deducted": {
+      "main": [
+        [
+          {
+            "node": "LOW STOCK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DRY RUN?": {
+      "main": [
+        [
+          {
+            "node": "PREVIEW ONLY - NO WRITES",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "UPDATE Inventory Stock",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LOW STOCK?": {
+      "main": [
+        [
+          {
+            "node": "TELEGRAM Low Stock Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "DONE - stock updated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get NEW Orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get NEW Orders": {
+      "main": [
+        [
+          {
+            "node": "CONFIG - DRY RUN TRUE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "tags": [],
+  "pinData": {}
+}

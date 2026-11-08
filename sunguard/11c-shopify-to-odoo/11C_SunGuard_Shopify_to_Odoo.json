@@ -1,0 +1,392 @@
+{
+  "name": "11C SunGuard Shopify to Odoo Sales",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Manual test",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "b0"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "name": "Every 15 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        200
+      ],
+      "id": "b0b"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c1",
+              "name": "odoo_url",
+              "value": "http://host.docker.internal:8069/jsonrpc",
+              "type": "string"
+            },
+            {
+              "id": "c2",
+              "name": "odoo_db",
+              "value": "logistics_demo",
+              "type": "string"
+            },
+            {
+              "id": "c3",
+              "name": "odoo_uid",
+              "value": 2,
+              "type": "number"
+            },
+            {
+              "id": "c4",
+              "name": "odoo_api_key",
+              "value": "PASTE_YOUR_ODOO_API_KEY_HERE",
+              "type": "string"
+            },
+            {
+              "id": "c5",
+              "name": "sunguard_company_id",
+              "value": 2,
+              "type": "number"
+            },
+            {
+              "id": "c6",
+              "name": "customer_name",
+              "value": "Shopify Online Customer",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        100
+      ],
+      "id": "b1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://YOUR-STORE.myshopify.com/admin/api/2026-10/graphql.json",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "shopifyOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\"query\": \"{ orders(first: 20, reverse: true) { edges { node { name createdAt displayFinancialStatus displayFulfillmentStatus lineItems(first: 20) { edges { node { title sku quantity originalUnitPriceSet { shopMoney { amount } } } } } } } } }\"}",
+        "options": {}
+      },
+      "id": "b2",
+      "name": "Get Shopify orders",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        100
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "shopifyOAuth2Api": {
+          "id": "CREDENTIAL_ID",
+          "name": "Shopify account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.odoo_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $('Config').first().json.odoo_db, $('Config').first().json.odoo_uid, $('Config').first().json.odoo_api_key, 'sale.order', 'search_read', [[['client_order_ref','like','SHOPIFY-']]], Object.assign({ context: { allowed_company_ids: [ $('Config').first().json.sunguard_company_id ] } }, { fields: ['client_order_ref'] }) ] } }) }}",
+        "options": {}
+      },
+      "name": "Odoo: synced orders",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        100
+      ],
+      "id": "b3",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.odoo_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $('Config').first().json.odoo_db, $('Config').first().json.odoo_uid, $('Config').first().json.odoo_api_key, 'product.product', 'search_read', [[['default_code','like','SG-']]], Object.assign({ context: { allowed_company_ids: [ $('Config').first().json.sunguard_company_id ] } }, { fields: ['default_code','name'] }) ] } }) }}",
+        "options": {}
+      },
+      "name": "Odoo: SunGuard products",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        960,
+        100
+      ],
+      "id": "b4",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.odoo_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $('Config').first().json.odoo_db, $('Config').first().json.odoo_uid, $('Config').first().json.odoo_api_key, 'res.partner', 'search_read', [[['name','=', $('Config').first().json.customer_name ]]], Object.assign({ context: { allowed_company_ids: [ $('Config').first().json.sunguard_company_id ] } }, { fields: ['name'], limit: 1 }) ] } }) }}",
+        "options": {}
+      },
+      "name": "Odoo: Shopify customer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        100
+      ],
+      "id": "b5",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Turn new Shopify orders into Odoo sale orders (skip ones already in Odoo)\nconst synced = new Set((($('Odoo: synced orders').first().json.result) || []).map(o => o.client_order_ref));\nconst products = Object.fromEntries((($('Odoo: SunGuard products').first().json.result) || []).map(p => [p.default_code, p.id]));\nconst partner = (($('Odoo: Shopify customer').first().json.result) || [])[0];\nif (!partner) throw new Error('Create a contact named \"Shopify Online Customer\" in Odoo first.');\n\nconst edges = $('Get Shopify orders').first().json.data?.orders?.edges || [];\nconst out = [];\nfor (const e of edges) {\n  const o = e.node;\n  const ref = `SHOPIFY-${o.name.replace('#', '')}`;\n  if (synced.has(ref)) continue;\n  const order_line = [];\n  const summary = [];\n  const missing = [];\n  let total = 0;\n  for (const le of (o.lineItems?.edges || [])) {\n    const li = le.node;\n    const pid = products[li.sku];\n    const price = Number(li.originalUnitPriceSet?.shopMoney?.amount || 0);\n    if (!pid) { missing.push(li.sku || li.title); continue; }\n    order_line.push([0, 0, { product_id: pid, product_uom_qty: li.quantity, price_unit: price }]);\n    summary.push(`• [${li.sku}] ${li.title} x${li.quantity}`);\n    total += price * li.quantity;\n  }\n  if (!order_line.length) continue;\n  out.push({ json: { ref, shopify_order: o.name, partner_id: partner.id, order_line,\n                     summary: summary.join('\\n'), total, missing: missing.join(', ') } });\n}\nreturn out;\n"
+      },
+      "name": "Build new Odoo orders",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        100
+      ],
+      "id": "b6"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.odoo_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $('Config').first().json.odoo_db, $('Config').first().json.odoo_uid, $('Config').first().json.odoo_api_key, 'sale.order', 'create', [{ partner_id: $json.partner_id, client_order_ref: $json.ref, origin: $json.shopify_order, company_id: $('Config').first().json.sunguard_company_id, order_line: $json.order_line }], Object.assign({ context: { allowed_company_ids: [ $('Config').first().json.sunguard_company_id ] } }, {}) ] } }) }}",
+        "options": {}
+      },
+      "name": "Odoo: create sale order",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1680,
+        100
+      ],
+      "id": "b7"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.odoo_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $('Config').first().json.odoo_db, $('Config').first().json.odoo_uid, $('Config').first().json.odoo_api_key, 'sale.order', 'action_confirm', [[ $json.result ]], Object.assign({ context: { allowed_company_ids: [ $('Config').first().json.sunguard_company_id ] } }, {}) ] } }) }}",
+        "options": {}
+      },
+      "name": "Odoo: confirm order",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1920,
+        100
+      ],
+      "id": "b8"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.odoo_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $('Config').first().json.odoo_db, $('Config').first().json.odoo_uid, $('Config').first().json.odoo_api_key, 'sale.order', 'search_read', [[['id','=', $('Odoo: create sale order').item.json.result ]]], Object.assign({ context: { allowed_company_ids: [ $('Config').first().json.sunguard_company_id ] } }, { fields: ['name','state','amount_total','picking_ids'] }) ] } }) }}",
+        "options": {}
+      },
+      "name": "Odoo: read order",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2160,
+        100
+      ],
+      "id": "b9"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.error ? '❌ Shopify → Odoo sync failed: ' + ($json.error.data?.message || $json.error.message) : '🛒 Shopify → Odoo sync (SunGuard)\\n\\nShopify ' + $('Build new Odoo orders').item.json.shopify_order + ' → Odoo ' + $json.result[0].name + ' (' + $json.result[0].state + ')\\n' + $('Build new Odoo orders').item.json.summary + '\\nTotal: PHP ' + $json.result[0].amount_total.toLocaleString() + '\\n\\n🚚 Delivery order created in SunGuard Warehouse (SGW).' + ($('Build new Odoo orders').item.json.missing ? '\\n⚠️ SKU not in Odoo: ' + $('Build new Odoo orders').item.json.missing : '') }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "name": "Telegram alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2400,
+        100
+      ],
+      "id": "b10",
+      "credentials": {
+        "telegramApi": {
+          "id": "CREDENTIAL_ID",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual test": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 15 minutes": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Get Shopify orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Shopify orders": {
+      "main": [
+        [
+          {
+            "node": "Odoo: synced orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: synced orders": {
+      "main": [
+        [
+          {
+            "node": "Odoo: SunGuard products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: SunGuard products": {
+      "main": [
+        [
+          {
+            "node": "Odoo: Shopify customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: Shopify customer": {
+      "main": [
+        [
+          {
+            "node": "Build new Odoo orders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build new Odoo orders": {
+      "main": [
+        [
+          {
+            "node": "Odoo: create sale order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: create sale order": {
+      "main": [
+        [
+          {
+            "node": "Odoo: confirm order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: confirm order": {
+      "main": [
+        [
+          {
+            "node": "Odoo: read order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: read order": {
+      "main": [
+        [
+          {
+            "node": "Telegram alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Manila"
+  },
+  "pinData": {},
+  "active": false
+}
