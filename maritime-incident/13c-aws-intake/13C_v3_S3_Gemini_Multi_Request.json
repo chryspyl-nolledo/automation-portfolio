@@ -301,6 +301,19 @@
         880
       ],
       "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// The n8n S3 'Get Many' node lists ONE folder level (not sub-folders),\n// so we list each recent UTC date folder separately. Backlog window = LOOKBACK_DAYS.\nconst LOOKBACK_DAYS = 3; // today + 2 previous days\nconst out = [];\nfor (let d = 0; d < LOOKBACK_DAYS; d++) {\n  const date = new Date(Date.now() - d * 86400000).toISOString().slice(0, 10);\n  out.push({ json: { date, requests_prefix: `maritime-incident-demo/requests/${date}/` } });\n}\nreturn out;"
+      },
+      "id": "a1c2e3f4-0000-4000-8000-000000000002",
+      "name": "Recent Date Folders (UTC)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        880
+      ]
     }
   ],
   "pinData": {
