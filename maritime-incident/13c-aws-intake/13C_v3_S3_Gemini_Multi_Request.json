@@ -1,5 +1,5 @@
 {
-  "name": "13C v3.3 - S3 Gemini (Loop per Date, Backlog-Aware, GATE OFF)",
+  "name": "13C v3.4 - S3 Gemini + 13A Sheet (Loop per Date, GATE OFF)",
   "nodes": [
     {
       "parameters": {},
@@ -138,7 +138,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Per-item. Any bad/failed item is SKIPPED (no result file) so the next poll retries it.\nconst items = $input.all();\nconst sources = $('Build Gemini Vision Request - Sample Photo').all();\nconst fields = ['summary','what_happened','immediate_cause','root_cause','corrective_action','preventive_action','severity','evidence_limitations','observation','suggested_report_type'];\nconst out = [];\nfor (let i = 0; i < items.length; i++) {\n  const incoming = items[i].json || {};\n  const src = sources[i]?.json;\n  if (!src || incoming.error) continue;\n  const reply = (incoming.candidates || []).flatMap(c => (c.content?.parts || []).map(p => p.text || '')).join('\\n').trim();\n  if (!reply) continue;\n  let draft;\n  try { draft = JSON.parse(reply.replace(/^```(?:json)?\\s*/i, '').replace(/\\s*```$/, '')); } catch (e) { continue; }\n  const okFields = fields.every(f => typeof draft[f] === 'string' && draft[f].trim() && draft[f].length <= 650);\n  const okSev = ['Moderate', 'Critical'].includes(draft.severity);\n  const okWhys = Array.isArray(draft.five_whys) && draft.five_whys.length === 5 && draft.five_whys.every(s => typeof s === 'string' && s.trim() && s.length <= 650);\n  if (!okFields || !okSev || !okWhys) continue;\n  const result = {\n    request_id: src.request_id, photo_id: src.photo_id, sample_data: true,\n    case_title: src.case_title, location: src.location, report_type: src.report_type,\n    crew_description: src.crew_description, photo_url: src.selected_photo_url,\n    status: 'draft_pending_officer_review', produced_by: 'Gemini Vision (AI-assisted sample draft)',\n    produced_at: new Date().toISOString(), officer_approved: false,\n    demo_notice: 'FICTIONAL SAMPLE. AI draft only. Not a verified incident or safety determination.',\n    draft\n  };\n  const bytes = Buffer.from(JSON.stringify(result, null, 2), 'utf8');\n  const resultFile = await this.helpers.prepareBinaryData(bytes, src.photo_id + '.json', 'application/json');\n  out.push({ json: { result_key: src.expected_result_s3_key, request_id: src.request_id, photo_id: src.photo_id, report_preview: draft, ready_to_save: true }, binary: { resultFile } });\n}\nreturn out;"
+        "jsCode": "// Per-item. Any bad/failed item is SKIPPED (no result file) so the next poll retries it.\nconst items = $input.all();\nconst sources = $('Build Gemini Vision Request - Sample Photo').all();\nconst fields = ['summary','what_happened','immediate_cause','root_cause','corrective_action','preventive_action','severity','evidence_limitations','observation','suggested_report_type'];\nconst out = [];\nfor (let i = 0; i < items.length; i++) {\n  const incoming = items[i].json || {};\n  const src = sources[i]?.json;\n  if (!src || incoming.error) continue;\n  const reply = (incoming.candidates || []).flatMap(c => (c.content?.parts || []).map(p => p.text || '')).join('\\n').trim();\n  if (!reply) continue;\n  let draft;\n  try { draft = JSON.parse(reply.replace(/^```(?:json)?\\s*/i, '').replace(/\\s*```$/, '')); } catch (e) { continue; }\n  const okFields = fields.every(f => typeof draft[f] === 'string' && draft[f].trim() && draft[f].length <= 650);\n  const okSev = ['Moderate', 'Critical'].includes(draft.severity);\n  const okWhys = Array.isArray(draft.five_whys) && draft.five_whys.length === 5 && draft.five_whys.every(s => typeof s === 'string' && s.trim() && s.length <= 650);\n  const okType = ['Incident', 'Near Miss', 'Safety Observation'].includes(draft.suggested_report_type);\n  if (!okFields || !okSev || !okWhys || !okType) continue;\n  const result = {\n    request_id: src.request_id, photo_id: src.photo_id, sample_data: true,\n    case_title: src.case_title, location: src.location, report_type: src.report_type,\n    crew_description: src.crew_description, photo_url: src.selected_photo_url,\n    status: 'draft_pending_officer_review', produced_by: 'Gemini Vision (AI-assisted sample draft)',\n    produced_at: new Date().toISOString(), officer_approved: false,\n    demo_notice: 'FICTIONAL SAMPLE. AI draft only. Not a verified incident or safety determination.',\n    draft\n  };\n  const bytes = Buffer.from(JSON.stringify(result, null, 2), 'utf8');\n  const resultFile = await this.helpers.prepareBinaryData(bytes, src.photo_id + '.json', 'application/json');\n  out.push({ json: { result_key: src.expected_result_s3_key, request_id: src.request_id, photo_id: src.photo_id, report_preview: draft, ready_to_save: true,\n    location: src.location, report_type: src.report_type, crew_description: src.crew_description,\n    photo_url: src.selected_photo_url }, binary: { resultFile } });\n}\nreturn out;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -174,7 +174,7 @@
     },
     {
       "parameters": {
-        "content": "## 13C v3 - S3 -> Gemini Vision -> Private S3 (multi-request, backlog-aware)\n\n**Flow:** Recent date folders (3 days) -> LOOP one date at a time: list requests/<date>/ + results/<date>/ -> keep only PENDING (no result file yet) -> download + validate request -> Gate -> photo -> Gemini -> validate -> save result to S3.\n\n**Backlog-aware:** pending is computed from S3 state, so requests made while n8n/laptop was offline are processed on the next run.\n\n**Safety:** `Manual Gemini Gate` has `ENABLE_GEMINI = false` and `MAX_PER_RUN = 3`. Schedule Trigger is DISABLED. Nothing calls Gemini until you change both on purpose.\n\n**Failed/invalid Gemini output:** item is skipped, no result file, retried next run. Watch your quota.\n\n**No Sheets/ClickUp writes yet.** 13A/13B untouched. No DeleteObject. IAM: ListBucket + GetObject on requests/*, ListBucket + PutObject on results/*.\n\n**Model:** verify the model in the Gemini node is the one that worked for PHOTO_02.",
+        "content": "## 13C v3 - S3 -> Gemini Vision -> Private S3 (multi-request, backlog-aware)\n\n**Flow:** Recent date folders (3 days) -> LOOP one date at a time: list requests/<date>/ + results/<date>/ -> keep only PENDING (no result file yet) -> download + validate request -> Gate -> photo -> Gemini -> validate -> save result to S3.\n\n**Backlog-aware:** pending is computed from S3 state, so requests made while n8n/laptop was offline are processed on the next run.\n\n**Safety:** `Manual Gemini Gate` has `ENABLE_GEMINI = false` and `MAX_PER_RUN = 3`. Schedule Trigger is DISABLED. Nothing calls Gemini until you change both on purpose.\n\n**Failed/invalid Gemini output:** item is skipped, no result file, retried next run. Watch your quota.\n\n**After S3 save:** adds a 13A-format row (Report_ID `AWS-<request_id>`, Status `Pending Officer Approval`) to the 13A Incidents Sheet and emails the officer. The EXISTING 13A approval branch and 13B handle ClickUp CAPA and closing. 13A/13B workflows are not changed. No DeleteObject. IAM: ListBucket + GetObject on requests/*, ListBucket + PutObject on results/*.\n\n**Model:** verify the model in the Gemini node is the one that worked for PHOTO_02.",
         "height": 610,
         "width": 825,
         "color": 5
@@ -342,6 +342,288 @@
         880,
         1040
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Same columns and statuses as 13A, so the EXISTING 13A approval branch\n// (Approved -> ClickUp CAPA) and 13B (ClickUp done -> Closed) work unchanged.\n// Runs only after the result JSON is saved in S3 (S3 = duplicate guard).\nconst saved = $('Validate Gemini Draft & Build Result File').all();\nconst out = [];\nfor (let i = 0; i < $input.all().length; i++) {\n  const s = saved[i]?.json; if (!s) continue;\n  const d = s.report_preview;\n  out.push({ json: {\n    Report_ID: 'AWS-' + s.request_id,\n    Timestamp: new Date().toISOString(),\n    Location: s.location, Report_Type: s.report_type, Crew_Description: s.crew_description,\n    Photo_Name: String(s.photo_url || '').split('/').pop(), Photo_URL: s.photo_url,\n    Observation: d.observation, Summary: d.summary, What_Happened: d.what_happened,\n    Immediate_Cause: d.immediate_cause,\n    Five_Whys: d.five_whys.map((x, n) => `${n + 1}. ${x}`).join(' | '),\n    Root_Cause: d.root_cause, Corrective_Action: d.corrective_action, Preventive_Action: d.preventive_action,\n    Severity: d.severity, Evidence_Limitations: d.evidence_limitations, Suggested_Report_Type: d.suggested_report_type,\n    Status: 'Pending Officer Approval', ClickUp_Status: 'Not Created', Approval_Date: ''\n  } });\n}\nreturn out;"
+      },
+      "id": "a1c2e3f4-0000-4000-8000-000000000008",
+      "name": "Build Incident Row (13A format)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3360,
+        688
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "13A Maritime Incident Reports Database",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 959181865,
+          "mode": "list",
+          "cachedResultName": "Incidents",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_GOOGLE_SHEET_ID/edit#gid=959181865"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Report_ID",
+              "displayName": "Report_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Location",
+              "displayName": "Location",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Report_Type",
+              "displayName": "Report_Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Crew_Description",
+              "displayName": "Crew_Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Photo_Name",
+              "displayName": "Photo_Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Photo_URL",
+              "displayName": "Photo_URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Observation",
+              "displayName": "Observation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Summary",
+              "displayName": "Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "What_Happened",
+              "displayName": "What_Happened",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Immediate_Cause",
+              "displayName": "Immediate_Cause",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Five_Whys",
+              "displayName": "Five_Whys",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Root_Cause",
+              "displayName": "Root_Cause",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Corrective_Action",
+              "displayName": "Corrective_Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Preventive_Action",
+              "displayName": "Preventive_Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Severity",
+              "displayName": "Severity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Evidence_Limitations",
+              "displayName": "Evidence_Limitations",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Suggested_Report_Type",
+              "displayName": "Suggested_Report_Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ClickUp_Status",
+              "displayName": "ClickUp_Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Approval_Date",
+              "displayName": "Approval_Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "a1c2e3f4-0000-4000-8000-000000000009",
+      "name": "Append Draft to 13A Incidents Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3664,
+        688
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR googleSheetsOAuth2Api credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Officer review email, same wording as 13A. Photo is linked (fixed demo photo on CloudFront).\nconst rows = $('Build Incident Row (13A format)').all();\nconst esc = v => String(v ?? '').replace(/[&<>\"']/g, x => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[x]));\nconst out = [];\nfor (let i = 0; i < $input.all().length; i++) {\n  const d = rows[i]?.json; if (!d) continue;\n  const lines = [['Report ID', d.Report_ID], ['Source', 'AWS website request (13C)'], ['Location', d.Location],\n    ['Report type', d.Report_Type], ['Severity (proposed)', d.Severity], ['Crew description', d.Crew_Description],\n    ['Observation', d.Observation], ['Summary', d.Summary], ['What happened', d.What_Happened],\n    ['Immediate cause (draft)', d.Immediate_Cause], ['Five Whys (draft)', d.Five_Whys],\n    ['Root cause (unconfirmed)', d.Root_Cause], ['Corrective action (proposed)', d.Corrective_Action],\n    ['Preventive action (proposed)', d.Preventive_Action], ['Evidence limitations', d.Evidence_Limitations], ['Status', d.Status]];\n  const html = '<h2>Maritime Safety AI Draft - Officer Review Required</h2><p><strong>Training/demo only. Not an official incident report.</strong> Photo: <a href=\"' + esc(d.Photo_URL) + '\">' + esc(d.Photo_Name) + '</a></p><table border=\"1\" cellpadding=\"6\" cellspacing=\"0\">' + lines.map(([k, v]) => '<tr><th align=\"left\">' + esc(k) + '</th><td>' + esc(v) + '</td></tr>').join('') + '</table><p><strong>Approve:</strong> Review and correct the row in the Incidents Google Sheet, then set Status exactly to <strong>Approved</strong>. The 13A approval branch creates the ClickUp CAPA task only after approval.</p>';\n  out.push({ json: { Report_ID: d.Report_ID, Severity: d.Severity, review_html: html } });\n}\nreturn out;"
+      },
+      "id": "a1c2e3f4-0000-4000-8000-00000000000a",
+      "name": "Prepare Officer Email (13C)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3952,
+        688
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "YOUR_OFFICER_EMAIL",
+        "subject": "=ACTION: Review draft incident {{$json.Report_ID}} ({{$json.Severity}})",
+        "message": "={{ $json.review_html }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "a1c2e3f4-0000-4000-8000-00000000000b",
+      "name": "Gmail - Request Officer Review (13C)",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        4240,
+        688
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR gmailOAuth2 credential"
+        }
+      }
     }
   ],
   "pinData": {
@@ -534,6 +816,50 @@
           }
         ]
       ]
+    },
+    "AWS S3 - Upload Private Draft Result": {
+      "main": [
+        [
+          {
+            "node": "Build Incident Row (13A format)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Incident Row (13A format)": {
+      "main": [
+        [
+          {
+            "node": "Append Draft to 13A Incidents Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Draft to 13A Incidents Sheet": {
+      "main": [
+        [
+          {
+            "node": "Prepare Officer Email (13C)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Officer Email (13C)": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Request Officer Review (13C)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
@@ -541,7 +867,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "b3c4d5e6-0000-4000-8000-000000000007",
+  "versionId": "b3c4d5e6-0000-4000-8000-000000000008",
   "meta": {
     "templateCredsSetupCompleted": true
   },
