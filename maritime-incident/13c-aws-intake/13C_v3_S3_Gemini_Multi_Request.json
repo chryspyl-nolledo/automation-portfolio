@@ -79,7 +79,7 @@
         "bucketName": "YOUR_S3_BUCKET",
         "returnAll": true,
         "options": {
-          "folderKey": "maritime-incident-demo/results/"
+          "folderKey": "={{ 'maritime-incident-demo/results/' + $json.request_date_utc + '/' }}"
         }
       },
       "type": "n8n-nodes-base.awsS3",
@@ -97,8 +97,7 @@
           "name": "YOUR aws credential"
         }
       },
-      "executeOnce": true,
-      "notes": "Runs ONCE per execution. Lists all results/ files."
+      "notes": "Lists the results/<date>/ folder of each validated request."
     },
     {
       "parameters": {
@@ -214,7 +213,7 @@
     },
     {
       "parameters": {
-        "content": "## 13C v3 - S3 -> Gemini Vision -> Private S3 (multi-request, backlog-aware)\n\n**Flow:** List requests/ -> validate -> list results/ ONCE -> keep only PENDING (no result file yet) -> Gate -> photo -> Gemini -> validate -> save result to S3.\n\n**Backlog-aware:** pending is computed from S3 state, so requests made while n8n/laptop was offline are processed on the next run.\n\n**Safety:** `Manual Gemini Gate` has `ENABLE_GEMINI = false` and `MAX_PER_RUN = 3`. Schedule Trigger is DISABLED. Nothing calls Gemini until you change both on purpose.\n\n**Failed/invalid Gemini output:** item is skipped, no result file, retried next run. Watch your quota.\n\n**No Sheets/ClickUp writes yet.** 13A/13B untouched. No DeleteObject. IAM: ListBucket + GetObject on requests/*, ListBucket + PutObject on results/*.\n\n**Model:** verify the model in the Gemini node is the one that worked for PHOTO_02.",
+        "content": "## 13C v3 - S3 -> Gemini Vision -> Private S3 (multi-request, backlog-aware)\n\n**Flow:** Recent date folders (3 days) -> list requests/<date>/ -> validate -> list results/<date>/ -> keep only PENDING (no result file yet) -> Gate -> photo -> Gemini -> validate -> save result to S3.\n\n**Backlog-aware:** pending is computed from S3 state, so requests made while n8n/laptop was offline are processed on the next run.\n\n**Safety:** `Manual Gemini Gate` has `ENABLE_GEMINI = false` and `MAX_PER_RUN = 3`. Schedule Trigger is DISABLED. Nothing calls Gemini until you change both on purpose.\n\n**Failed/invalid Gemini output:** item is skipped, no result file, retried next run. Watch your quota.\n\n**No Sheets/ClickUp writes yet.** 13A/13B untouched. No DeleteObject. IAM: ListBucket + GetObject on requests/*, ListBucket + PutObject on results/*.\n\n**Model:** verify the model in the Gemini node is the one that worked for PHOTO_02.",
         "height": 610,
         "width": 825,
         "color": 5
@@ -250,7 +249,7 @@
         "bucketName": "YOUR_S3_BUCKET",
         "returnAll": true,
         "options": {
-          "folderKey": "={{ 'maritime-incident-demo/requests/' }}"
+          "folderKey": "={{ $json.requests_prefix }}"
         }
       },
       "id": "322b014f-9e8c-4dca-b576-11f5cbfabdf4",
@@ -267,7 +266,7 @@
           "name": "YOUR aws credential"
         }
       },
-      "notes": "Lists all request files under requests/ (Return All). Needs ListBucket on demo prefix."
+      "notes": "Runs once per date folder from 'Recent Date Folders'."
     },
     {
       "parameters": {
@@ -313,6 +312,17 @@
   },
   "connections": {
     "Manual Trigger - Safe Test": {
+      "main": [
+        [
+          {
+            "node": "Recent Date Folders (UTC)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recent Date Folders (UTC)": {
       "main": [
         [
           {
@@ -448,7 +458,7 @@
       "main": [
         [
           {
-            "node": "AWS S3 - List Requests",
+            "node": "Recent Date Folders (UTC)",
             "type": "main",
             "index": 0
           }
@@ -461,7 +471,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "b3c4d5e6-0000-4000-8000-000000000004",
+  "versionId": "b3c4d5e6-0000-4000-8000-000000000005",
   "meta": {
     "templateCredsSetupCompleted": true
   },
