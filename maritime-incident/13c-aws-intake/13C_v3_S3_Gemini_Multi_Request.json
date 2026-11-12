@@ -1,5 +1,5 @@
 {
-  "name": "13C v3.2 - S3 Gemini (Loop per Date, Backlog-Aware, GATE OFF)",
+  "name": "13C v3.3 - S3 Gemini (Loop per Date, Backlog-Aware, GATE OFF)",
   "nodes": [
     {
       "parameters": {},
@@ -283,7 +283,7 @@
         "bucketName": "YOUR_S3_BUCKET",
         "returnAll": true,
         "options": {
-          "folderKey": "={{ $('Loop Over Dates').first().json.results_prefix }}"
+          "folderKey": "={{ $json.results_prefix }}"
         }
       },
       "id": "a1c2e3f4-0000-4000-8000-000000000004",
@@ -291,7 +291,7 @@
       "type": "n8n-nodes-base.awsS3",
       "typeVersion": 2,
       "position": [
-        880,
+        1120,
         1040
       ],
       "executeOnce": true,
@@ -306,14 +306,14 @@
     },
     {
       "parameters": {
-        "jsCode": "// One summary item per date: which request files and result files exist.\nconst k = i => String(i.json?.Key || i.json?.key || '');\nconst date = $('Loop Over Dates').first().json.date;\nconst requests = $('AWS S3 - List Requests').all()\n  .map(i => ({ key: k(i), size: Number(i.json?.Size || i.json?.size || 0) })).filter(r => r.key);\nconst result_keys = $input.all().map(k).filter(Boolean);\nreturn [{ json: { date, requests, result_keys } }];"
+        "jsCode": "// One summary item per date: request files + result files of THAT date only.\nconst s = $('Summarize Requests (this date)').first().json;\nconst prefix = s.results_prefix;\nconst result_keys = $input.all().map(i => String(i.json?.Key || i.json?.key || ''))\n  .filter(key => key.startsWith(prefix));   // safety: ignore keys from any other date\nreturn [{ json: { date: s.date, requests: s.requests, result_keys } }];"
       },
       "id": "a1c2e3f4-0000-4000-8000-000000000005",
       "name": "Collect Date Keys",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1120,
+        1360,
         1040
       ]
     },
@@ -328,6 +328,19 @@
       "position": [
         656,
         688
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Runs once per loop pass. Builds ONE item for this date, so the next S3 node\n// reads its folder from its own input ($json) instead of another node.\nconst k = i => String(i.json?.Key || i.json?.key || '');\nconst date = $('Loop Over Dates').first().json.date;\nconst requests = $input.all()\n  .map(i => ({ key: k(i), size: Number(i.json?.Size || i.json?.size || 0) }))\n  .filter(r => r.key.startsWith(`maritime-incident-demo/requests/${date}/`));\nreturn [{ json: { date, requests, results_prefix: `maritime-incident-demo/results/${date}/` } }];"
+      },
+      "id": "a1c2e3f4-0000-4000-8000-000000000007",
+      "name": "Summarize Requests (this date)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        1040
       ]
     }
   ],
@@ -394,7 +407,7 @@
       "main": [
         [
           {
-            "node": "AWS S3 - List Results (same date)",
+            "node": "Summarize Requests (this date)",
             "type": "main",
             "index": 0
           }
@@ -510,6 +523,17 @@
           }
         ]
       ]
+    },
+    "Summarize Requests (this date)": {
+      "main": [
+        [
+          {
+            "node": "AWS S3 - List Results (same date)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
@@ -517,7 +541,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "b3c4d5e6-0000-4000-8000-000000000006",
+  "versionId": "b3c4d5e6-0000-4000-8000-000000000007",
   "meta": {
     "templateCredsSetupCompleted": true
   },
