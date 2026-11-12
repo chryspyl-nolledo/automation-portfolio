@@ -101,6 +101,7 @@ button.btn:disabled{opacity:.55;cursor:not-allowed}
 <main><div class="inner">
 <section>
   <h2>1. Choose a sample photo</h2>
+  <p class="notice"><strong>Live demo note:</strong> AI drafts are created by a self-hosted n8n server. When it is running, a new draft appears within a few minutes. When it is offline, your request stays queued and is processed automatically once it is back online (requests are kept for 3 days). Drafts already created today appear instantly.</p>
   <p class="fits">Only these 8 fictional photos are allowed. No uploads. One AI draft per photo per day; repeat requests show the same draft.</p>
   <form id="f">
     <div class="pick" id="pick"></div>
@@ -191,10 +192,10 @@ button.btn:disabled{opacity:.55;cursor:not-allowed}
       if (r.code === 200 && r.data.status === "pending") {
         polls += 1;
         if (polls >= MAX_POLLS) {
-          say("Still queued. The demo n8n service may be offline. Request ID: " + requestId + ". Try again later.");
+          say("Still queued. The self-hosted n8n server is probably offline right now. Your request (" + requestId + ") is saved and will be processed when it is back online. Choose the same photo later to see the draft.");
           ready(); return;
         }
-        say("Queued (" + requestId + "). Waiting for n8n and Gemini. Checking every 15 seconds.");
+        say("Queued (" + requestId + "). Waiting for the self-hosted n8n server and Gemini. Checking every 15 seconds.");
         timer = setTimeout(function () { poll(requestId); }, POLL_MS); return;
       }
       say(r.code === 403 ? "The demo is offline right now." : "Could not get the status (" + r.code + ").");
