@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="Test page: AWS maritime incident intake with Gemini Vision draft (fictional demo).">
+<title>13C Incident Demo | Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@500;600&family=Libre+Franklin:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+*{box-sizing:border-box}body{margin:0}img{max-width:100%}
+:root{--tint:rgba(255,255,255,0.10);--panel:rgba(250,252,254,0.93);--panel-line:rgba(12,44,74,0.12);--ink:#12273b;--ink-soft:#46596b;--hero-ink:#0b2a4a;--accent:#1d5f99;--chip:rgba(29,95,153,0.10);
+--display:"Zilla Slab",Georgia,serif;--body:"Libre Franklin","Segoe UI",Arial,sans-serif;--mono:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--tint:rgba(4,14,26,0.55);--panel:rgba(12,24,38,0.93);--panel-line:rgba(200,220,240,0.14);--ink:#e8eef4;--ink-soft:#a9b8c6;--hero-ink:#f4f8fb;--accent:#7fb6e8;--chip:rgba(127,182,232,0.14);color-scheme:dark}}
+:root[data-theme="dark"]{--tint:rgba(4,14,26,0.55);--panel:rgba(12,24,38,0.93);--panel-line:rgba(200,220,240,0.14);--ink:#e8eef4;--ink-soft:#a9b8c6;--hero-ink:#f4f8fb;--accent:#7fb6e8;--chip:rgba(127,182,232,0.14);color-scheme:dark}
+body{background:#1c4f80;color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.65}
+.sea{position:fixed;inset:0;z-index:-1;background:linear-gradient(var(--tint),var(--tint)),url("bg.jpg") center 62%/cover no-repeat}
+.wrap{max-width:860px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{padding-block:9vh 8vh;color:var(--hero-ink)}
+.rank{font-family:var(--mono);font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+h1{font-family:var(--display);font-weight:600;font-size:clamp(34px,7vw,56px);line-height:1.05;margin:6px 0 12px;text-wrap:balance}
+.lead{max-width:36em;font-size:17px;margin:0}
+main{background:var(--panel);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border-radius:14px 14px 0 0;border:1px solid var(--panel-line);border-bottom:0}
+.inner{padding:28px 20px 40px;display:grid;gap:40px}
+.inner>*{min-width:0}
+h2{font-family:var(--display);font-weight:600;font-size:26px;margin:0 0 12px}
+h3{font-family:var(--display);font-weight:500;font-size:20px;margin:0 0 6px}
+p{margin:0 0 12px;max-width:68ch}
+a{color:var(--accent)}
+.back{font-size:14px;font-weight:500;text-decoration:none;padding:6px 12px;border:1px solid var(--panel-line);border-radius:999px;justify-self:start}
+.cards{display:grid;gap:22px}
+.card{padding-top:16px;border-top:1px solid var(--panel-line);min-width:0}
+.tags{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-bottom:6px}
+.card a{font-weight:500;margin-right:14px;text-decoration:none}
+.card a:hover{text-decoration:underline}
+.btn{display:inline-block;background:var(--accent);color:#fff!important;padding:7px 14px;border-radius:8px;font-weight:600;font-size:14px;text-decoration:none!important;margin:4px 10px 4px 0}
+:root[data-theme="dark"] .btn{color:#0b2033!important}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn{color:#0b2033!important}}
+.flow{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-family:var(--mono);font-size:12px;margin:6px 0 10px}
+.flow span{border:1px solid var(--panel-line);background:var(--chip);border-radius:6px;padding:2px 8px}
+.flow i{font-style:normal;color:var(--ink-soft)}
+.fits{font-size:14px;color:var(--ink-soft);margin:0 0 8px}
+.fits b{color:var(--ink);font-weight:600}
+.badge{display:inline-block;font-family:var(--mono);font-size:11px;padding:1px 7px;border-radius:999px;background:var(--chip);color:var(--accent);margin-left:6px;vertical-align:middle}
+.tablebox{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:14px;min-width:520px}
+th,td{text-align:left;padding:8px 10px 8px 0;border-bottom:1px solid var(--panel-line);vertical-align:top}
+th{font-size:12px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);font-weight:500}
+ul.plain{margin:0;padding-left:20px} ul.plain li{margin-bottom:6px}
+footer{font-family:var(--mono);font-size:12px;color:var(--ink-soft)}
+@media (min-width:760px){.inner{padding:40px 44px 56px}.cards{grid-template-columns:1fr 1fr}}
+.shot{margin:8px 0 12px;border:1px solid var(--panel-line);border-radius:8px;overflow:hidden;background:#fff}
+.shot img{display:block;width:100%;height:auto}
+figcaption{font-size:13px;color:var(--ink-soft);padding:6px 10px;background:var(--panel)}
+.embed{position:relative;width:100%;aspect-ratio:4/3;border:1px solid var(--panel-line);border-radius:8px;overflow:hidden;background:#fff}
+.embed iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:8px 0 12px}
+.stats div{border:1px solid var(--panel-line);border-radius:8px;padding:8px 10px;background:var(--chip)}
+.stats b{display:block;font-family:var(--display);font-size:22px;font-weight:600}
+.stats span{font-size:13px;color:var(--ink-soft)}
+.wide{grid-column:1/-1}
+.evidence{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0 16px}.evidence figure{margin:0}.evidence .shot{margin:0}.evidence .shot img{aspect-ratio:16/9;object-fit:contain;background:#eff4f8}.notice{font-size:14px;color:var(--ink-soft);padding:12px 14px;border:1px solid var(--panel-line);border-radius:8px;background:var(--chip);margin:16px 0}.card h3{line-height:1.4}@media(max-width:580px){.evidence{grid-template-columns:1fr}.flow{overflow-wrap:anywhere}.badge{margin-left:0}}
+
+.step-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px;margin:16px 0}
+.step-grid div{border:1px solid var(--panel-line);background:var(--chip);border-radius:9px;padding:12px}
+.step-grid strong{display:block;font-size:15px;color:var(--accent);margin:0 0 5px}
+.step-grid span{color:var(--ink-soft);font-size:13px}
+.mini-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:14px 0 22px}
+.mini-stats div{border:1px solid var(--panel-line);background:var(--chip);border-radius:9px;padding:14px}
+.mini-stats b{font-family:var(--display);font-size:29px;display:block}
+.mini-stats span{color:var(--ink-soft);font-size:13px}
+.details-line{margin:16px 0;border-top:1px solid var(--panel-line);padding-top:14px}
+.caption-bold{font-weight:600;color:var(--ink)}
+@media(max-width:720px){.evidence{grid-template-columns:1fr}}
+.pick{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:12px 0 16px}
+.pick label{display:block;border:1px solid var(--panel-line);border-radius:9px;overflow:hidden;background:var(--chip);cursor:pointer}
+.pick input{position:absolute;opacity:0;pointer-events:none}
+.pick img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#eff4f8}
+.pick span{display:block;font-size:13px;padding:6px 8px;line-height:1.3}
+.pick input:checked+label{outline:3px solid var(--accent);outline-offset:-3px}
+.pick input:focus-visible+label{outline:3px dashed var(--accent);outline-offset:-3px}
+button.btn{border:0;cursor:pointer;font-family:var(--body)}
+button.btn:disabled{opacity:.55;cursor:not-allowed}
+.status{font-size:15px;padding:12px 14px;border:1px solid var(--panel-line);border-radius:8px;background:var(--chip);margin:12px 0}
+.status[hidden],.report[hidden]{display:none}
+.report dl{display:grid;gap:10px;margin:0}
+.report dt{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft)}
+.report dd{margin:0}
+.report ol{margin:0;padding-left:20px}
+</style>
+</head>
+<body>
+<div class="sea" aria-hidden="true"></div>
+<div class="wrap">
+<header>
+  <div class="rank">Project 13C · Test page · Fictional demo</div>
+  <h1>Maritime Incident Intake on AWS</h1>
+  <p class="lead">Pick a sample safety photo. The request goes to AWS Lambda and S3, n8n reads it, and Gemini Vision writes a draft report for officer review.</p>
+</header>
+<main><div class="inner">
+<section>
+  <h2>1. Choose a sample photo</h2>
+  <p class="notice"><strong>Live demo note:</strong> AI drafts are created by a self-hosted n8n server. When it is running, a new draft appears within a few minutes. When it is offline, your request stays queued and is processed automatically once it is back online (requests are kept for 3 days). Drafts already created today appear instantly.</p>
+  <p class="fits">Only these 8 fictional photos are allowed. No uploads. One AI draft per photo per day; repeat requests show the same draft.</p>
+  <form id="f">
+    <div class="pick" id="pick"></div>
+    <button class="btn" id="send" type="submit" disabled>Request AI draft</button>
+  </form>
+  <div class="status" id="status" role="status" aria-live="polite" hidden></div>
+</section>
+<section class="report" id="report" hidden>
+  <h2 id="r-title"></h2>
+  <p class="tags" id="r-meta"></p>
+  <figure class="shot"><img id="r-img" alt=""><figcaption id="r-desc"></figcaption></figure>
+  <p class="notice" id="r-notice"></p>
+  <dl id="r-fields"></dl>
+</section>
+<footer>Fictional training data. AI draft only, not a verified incident or safety determination. <a href="index.html">Home</a></footer>
+</div></main>
+</div>
+<script>
+(function () {
+  "use strict";
+  var API = "https://YOUR_FUNCTION_URL/";
+  var PHOTOS = {
+    PHOTO_01: ["Galley Microwave Fire", "Photo_01_Galley_Microwave_Fire.png"],
+    PHOTO_02: ["Tangled Mooring Ropes", "Photo_02_Tangled_Mooring_Ropes.png"],
+    PHOTO_03: ["Wet Accommodation Stairway", "Photo_03_Wet_Accommodation_Stairway.png"],
+    PHOTO_04: ["Crew Near Mooring Wire", "Photo_04_Crew_Near_Mooring_Wire.png"],
+    PHOTO_05: ["Oil Spill in Engine Room", "Photo_05_Oil_Spill_Engine_Room.png"],
+    PHOTO_06: ["Loose Hoses and Cables", "Photo_06_Loose_Hoses_and_Cables.png"],
+    PHOTO_07: ["Crew Near Open Cargo Hold", "Photo_07_Crew_Near_Open_Cargo_Hold.png"],
+    PHOTO_08: ["Blocked Fire Extinguisher", "Photo_08_Blocked_Fire_Extinguisher.png"]
+  };
+  var IMG = "maritime-incident-demo/photos/";
+  var POLL_MS = 15000, MAX_POLLS = 40; // about 10 minutes
+  function byId(id) { return document.getElementById(id); }
+  var timer = null, polls = 0;
+
+  function el(tag, text) { var e = document.createElement(tag); if (text != null) e.textContent = text; return e; }
+  function say(msg) { var s = byId("status"); s.hidden = false; s.textContent = msg; }
+  function ready() { byId("send").disabled = false; }
+
+  Object.keys(PHOTOS).forEach(function (id, i) {
+    var input = el("input"); input.type = "radio"; input.name = "photo"; input.value = id; input.id = "p" + i;
+    var label = el("label"); label.htmlFor = input.id;
+    var img = el("img"); img.src = IMG + PHOTOS[id][1]; img.alt = PHOTOS[id][0]; img.loading = "lazy";
+    label.appendChild(img); label.appendChild(el("span", id.replace("_", " ") + " · " + PHOTOS[id][0]));
+    byId("pick").appendChild(input); byId("pick").appendChild(label);
+    input.addEventListener("change", ready);
+  });
+
+  function call(method, query, body) {
+    var opts = { method: method, headers: {} };
+    if (body) { opts.headers["content-type"] = "application/json"; opts.body = JSON.stringify(body); }
+    return fetch(API + (query || ""), opts).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (d) { return { code: r.status, data: d }; });
+    });
+  }
+
+  function showReport(res) {
+    var d = res.draft || {};
+    byId("r-title").textContent = res.case_title || res.photo_id || "Draft report";
+    byId("r-meta").textContent = [res.photo_id, res.location, res.report_type, "Proposed severity: " + (d.severity || "-")].join(" · ");
+    var p = PHOTOS[res.photo_id]; if (p) { byId("r-img").src = IMG + p[1]; byId("r-img").alt = p[0]; }
+    byId("r-desc").textContent = "Crew description: " + (res.crew_description || "");
+    byId("r-notice").textContent = (res.demo_notice || "AI draft only.") + " Status: draft pending officer review.";
+    var dl = byId("r-fields"); dl.textContent = "";
+    [["Summary", "summary"], ["What happened", "what_happened"], ["Immediate cause", "immediate_cause"],
+     ["Root cause", "root_cause"], ["Five whys", "five_whys"], ["Corrective action", "corrective_action"],
+     ["Preventive action", "preventive_action"], ["Observation", "observation"],
+     ["Evidence limitations", "evidence_limitations"], ["Suggested report type", "suggested_report_type"]]
+    .forEach(function (f) {
+      var v = d[f[1]]; if (v == null) return;
+      dl.appendChild(el("dt", f[0]));
+      var dd = el("dd");
+      if (Array.isArray(v)) { var ol = el("ol"); v.forEach(function (w) { ol.appendChild(el("li", String(w))); }); dd.appendChild(ol); }
+      else dd.textContent = String(v);
+      dl.appendChild(dd);
+    });
+    byId("report").hidden = false;
+  }
+
+  function poll(requestId) {
+    clearTimeout(timer);
+    call("GET", "?request_id=" + encodeURIComponent(requestId)).then(function (r) {
+      if (r.code === 200 && r.data.status === "ready") {
+        say("Draft ready (" + requestId + ").");
+        showReport(r.data.result || {}); ready(); return;
+      }
+      if (r.code === 200 && r.data.status === "pending") {
+        polls += 1;
+        if (polls >= MAX_POLLS) {
+          say("Still queued. The self-hosted n8n server is probably offline right now. Your request (" + requestId + ") is saved and will be processed when it is back online. Choose the same photo later to see the draft.");
+          ready(); return;
+        }
+        say("Queued (" + requestId + "). Waiting for the self-hosted n8n server and Gemini. Checking every 15 seconds.");
+        timer = setTimeout(function () { poll(requestId); }, POLL_MS); return;
+      }
+      say(r.code === 403 ? "The demo is offline right now." : "Could not get the status (" + r.code + ").");
+      ready();
+    }).catch(function () { say("Network error. Please try again."); ready(); });
+  }
+
+  byId("f").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var c = document.querySelector('input[name="photo"]:checked'); if (!c) return;
+    byId("send").disabled = true; byId("report").hidden = true; polls = 0;
+    say("Sending request...");
+    call("POST", "", { photo_id: c.value }).then(function (r) {
+      // 202 = new request, 409 = already requested today: both lead to the same draft
+      if ((r.code === 202 || r.code === 409) && r.data.request_id) { poll(r.data.request_id); return; }
+      say(r.code === 403 ? "The demo is offline right now." : (r.data.error || "Request failed (" + r.code + ")."));
+      ready();
+    }).catch(function () { say("Network error. Please try again."); ready(); });
+  });
+})();
+</script>
+</body>
+</html>
