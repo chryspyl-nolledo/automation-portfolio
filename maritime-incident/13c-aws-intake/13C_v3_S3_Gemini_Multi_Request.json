@@ -1,5 +1,5 @@
 {
-  "name": "13C v3 - S3 Gemini (Multi-Request, Backlog-Aware, GATE OFF)",
+  "name": "13C v3.2 - S3 Gemini (Loop per Date, Backlog-Aware, GATE OFF)",
   "nodes": [
     {
       "parameters": {},
@@ -8,21 +8,8 @@
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        64,
-        688
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Only allow expected Project 13 request files; skip folder markers.\n// This workflow does NOT acknowledge or process the queue.\nconst root = 'maritime-incident-demo/requests/';\nconst pathRx = /^maritime-incident-demo\\/requests\\/(\\d{4}-\\d{2}-\\d{2})\\/(PHOTO_0[1-8])\\.json$/;\nreturn $input.all().filter((item) => {\n  const key = String(item.json.Key || item.json.key || '');\n  const size = Number(item.json.Size || item.json.size || 0);\n  return key.startsWith(root) && pathRx.test(key) && size > 0 && size <= 4096;\n});"
-      },
-      "id": "903951fb-6d8d-41f8-b868-06fc723b3f7b",
-      "name": "Filter Valid Request Keys",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        656,
-        688
+        0,
+        800
       ]
     },
     {
@@ -48,7 +35,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Validate each downloaded JSON request before any future Gemini wiring.\n// IMPORTANT: Read-only test, does NOT call AI or create Sheets/ClickUp rows.\nconst rx = /^maritime-incident-demo\\/requests\\/(\\d{4}-\\d{2}-\\d{2})\\/(PHOTO_0[1-8])\\.json$/;\nconst photos = {\n  \"PHOTO_01\": \"Photo_01_Galley_Microwave_Fire.png\",\n  \"PHOTO_02\": \"Photo_02_Tangled_Mooring_Ropes.png\",\n  \"PHOTO_03\": \"Photo_03_Wet_Accommodation_Stairway.png\",\n  \"PHOTO_04\": \"Photo_04_Crew_Near_Mooring_Wire.png\",\n  \"PHOTO_05\": \"Photo_05_Oil_Spill_Engine_Room.png\",\n  \"PHOTO_06\": \"Photo_06_Loose_Hoses_and_Cables.png\",\n  \"PHOTO_07\": \"Photo_07_Crew_Near_Open_Cargo_Hold.png\",\n  \"PHOTO_08\": \"Photo_08_Blocked_Fire_Extinguisher.png\"\n};\nconst outputs = [];\nconst items = $input.all();\nfor (let i = 0; i < items.length; i++) {\n  const key = String(items[i].json.Key || items[i].json.key || '');\n  const matched = key.match(rx);\n  if (!matched) continue;\n  if (!items[i].binary || !items[i].binary.data) {\n    throw new Error('Missing S3 file binary payload for ' + key);\n  }\n  const buffer = await this.helpers.getBinaryDataBuffer(i, 'data');\n  if (buffer.length > 4096) throw new Error('Request JSON exceeds 4 KB');\n  let data;\n  try { data = JSON.parse(buffer.toString('utf8')); }\n  catch (e) { throw new Error('Invalid request JSON for ' + key); }\n  const date = matched[1];\n  const photoId = matched[2];\n  const expectedId = date + '-' + photoId;\n  if (data.photo_id !== photoId || data.request_id !== expectedId ||\n      data.status !== 'pending' || data.sample_data !== true) {\n    continue; // skip invalid/non-pending, never block the batch\n  }\n  const photoFile = photos[photoId];\n  outputs.push({json:{\n    request_id: expectedId,\n    photo_id: photoId,\n    request_date_utc: date,\n    status: 'pending',\n    sample_data: true,\n    source: data.source || 'demo',\n    created_at: data.created_at || null,\n    request_s3_bucket: 'YOUR_S3_BUCKET',\n    request_s3_key: key,\n    selected_photo_filename: photoFile,\n    selected_photo_url: 'https://YOUR_CLOUDFRONT_DOMAIN/maritime-incident-demo/photos/' + photoFile,\n    intake_verified: true,\n    next_step: 'VALIDATED SAMPLE REQUEST - manual Gemini gate currently OFF',\n  }});\n}\nreturn outputs;"
+        "jsCode": "// Validate each downloaded JSON request before any future Gemini wiring.\n// IMPORTANT: Read-only test, does NOT call AI or create Sheets/ClickUp rows.\nconst rx = /^maritime-incident-demo\\/requests\\/(\\d{4}-\\d{2}-\\d{2})\\/(PHOTO_0[1-8])\\.json$/;\nconst photos = {\n  \"PHOTO_01\": \"Photo_01_Galley_Microwave_Fire.png\",\n  \"PHOTO_02\": \"Photo_02_Tangled_Mooring_Ropes.png\",\n  \"PHOTO_03\": \"Photo_03_Wet_Accommodation_Stairway.png\",\n  \"PHOTO_04\": \"Photo_04_Crew_Near_Mooring_Wire.png\",\n  \"PHOTO_05\": \"Photo_05_Oil_Spill_Engine_Room.png\",\n  \"PHOTO_06\": \"Photo_06_Loose_Hoses_and_Cables.png\",\n  \"PHOTO_07\": \"Photo_07_Crew_Near_Open_Cargo_Hold.png\",\n  \"PHOTO_08\": \"Photo_08_Blocked_Fire_Extinguisher.png\"\n};\nconst outputs = [];\nconst items = $input.all();\nfor (let i = 0; i < items.length; i++) {\n  const key = String(items[i].json.Key || items[i].json.key || '');\n  const matched = key.match(rx);\n  if (!matched) continue;\n  if (!items[i].binary || !items[i].binary.data) {\n    throw new Error('Missing S3 file binary payload for ' + key);\n  }\n  const buffer = await this.helpers.getBinaryDataBuffer(i, 'data');\n  if (buffer.length > 4096) throw new Error('Request JSON exceeds 4 KB');\n  let data;\n  try { data = JSON.parse(buffer.toString('utf8')); }\n  catch (e) { throw new Error('Invalid request JSON for ' + key); }\n  const date = matched[1];\n  const photoId = matched[2];\n  const expectedId = date + '-' + photoId;\n  if (data.photo_id !== photoId || data.request_id !== expectedId ||\n      data.status !== 'pending' || data.sample_data !== true) {\n    continue; // skip invalid/non-pending, never block the batch\n  }\n  const photoFile = photos[photoId];\n  outputs.push({json:{\n    request_id: expectedId,\n    photo_id: photoId,\n    request_date_utc: date,\n    status: 'pending',\n    sample_data: true,\n    source: data.source || 'demo',\n    created_at: data.created_at || null,\n    request_s3_bucket: 'YOUR_S3_BUCKET',\n    request_s3_key: key,\n    selected_photo_filename: photoFile,\n    selected_photo_url: 'https://YOUR_CLOUDFRONT_DOMAIN/maritime-incident-demo/photos/' + photoFile,\n    intake_verified: true,\n    expected_result_s3_key: 'maritime-incident-demo/results/' + date + '/' + photoId + '.json',\n    result_not_found: true,\n    next_step: 'VALIDATED SAMPLE REQUEST - manual Gemini gate currently OFF',\n  }});\n}\nreturn outputs;"
       },
       "id": "ff42695a-d851-47d1-9fe4-261e2ea8c3e5",
       "name": "Validate & Prepare Photo 13C",
@@ -67,37 +54,11 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2464,
+        1552,
         688
       ],
       "id": "6658dac0-5e83-423f-a70c-697f9947dfcb",
       "name": "Manual Gemini Gate - OFF by default"
-    },
-    {
-      "parameters": {
-        "operation": "getAll",
-        "bucketName": "YOUR_S3_BUCKET",
-        "returnAll": true,
-        "options": {
-          "folderKey": "={{ 'maritime-incident-demo/results/' + $json.request_date_utc + '/' }}"
-        }
-      },
-      "type": "n8n-nodes-base.awsS3",
-      "typeVersion": 2,
-      "position": [
-        1856,
-        688
-      ],
-      "id": "b3680d11-d435-44b3-babd-c8a6eec43893",
-      "name": "AWS S3 - List Existing Results",
-      "alwaysOutputData": true,
-      "credentials": {
-        "aws": {
-          "id": "YOUR_CREDENTIAL_ID",
-          "name": "YOUR aws credential"
-        }
-      },
-      "notes": "Lists the results/<date>/ folder of each validated request."
     },
     {
       "parameters": {
@@ -121,7 +82,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2752,
+        1856,
         688
       ],
       "id": "81d27a52-8f8e-4f60-bcdb-f476cbc504a6",
@@ -134,7 +95,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3056,
+        2160,
         688
       ],
       "id": "bffb2da4-b100-4056-a90b-ea8e6e2f32d2",
@@ -162,7 +123,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3360,
+        2464,
         688
       ],
       "id": "b9b2db12-8803-4031-8de3-0948b5a595d4",
@@ -182,7 +143,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3664,
+        2752,
         688
       ],
       "id": "f52ab271-c136-44b3-9099-ee5a18f6a900",
@@ -199,7 +160,7 @@
       "type": "n8n-nodes-base.awsS3",
       "typeVersion": 2,
       "position": [
-        3952,
+        3056,
         688
       ],
       "id": "f7b5854d-9a33-4e95-ac9a-4c2d87dc9691",
@@ -213,7 +174,7 @@
     },
     {
       "parameters": {
-        "content": "## 13C v3 - S3 -> Gemini Vision -> Private S3 (multi-request, backlog-aware)\n\n**Flow:** Recent date folders (3 days) -> list requests/<date>/ -> validate -> list results/<date>/ -> keep only PENDING (no result file yet) -> Gate -> photo -> Gemini -> validate -> save result to S3.\n\n**Backlog-aware:** pending is computed from S3 state, so requests made while n8n/laptop was offline are processed on the next run.\n\n**Safety:** `Manual Gemini Gate` has `ENABLE_GEMINI = false` and `MAX_PER_RUN = 3`. Schedule Trigger is DISABLED. Nothing calls Gemini until you change both on purpose.\n\n**Failed/invalid Gemini output:** item is skipped, no result file, retried next run. Watch your quota.\n\n**No Sheets/ClickUp writes yet.** 13A/13B untouched. No DeleteObject. IAM: ListBucket + GetObject on requests/*, ListBucket + PutObject on results/*.\n\n**Model:** verify the model in the Gemini node is the one that worked for PHOTO_02.",
+        "content": "## 13C v3 - S3 -> Gemini Vision -> Private S3 (multi-request, backlog-aware)\n\n**Flow:** Recent date folders (3 days) -> LOOP one date at a time: list requests/<date>/ + results/<date>/ -> keep only PENDING (no result file yet) -> download + validate request -> Gate -> photo -> Gemini -> validate -> save result to S3.\n\n**Backlog-aware:** pending is computed from S3 state, so requests made while n8n/laptop was offline are processed on the next run.\n\n**Safety:** `Manual Gemini Gate` has `ENABLE_GEMINI = false` and `MAX_PER_RUN = 3`. Schedule Trigger is DISABLED. Nothing calls Gemini until you change both on purpose.\n\n**Failed/invalid Gemini output:** item is skipped, no result file, retried next run. Watch your quota.\n\n**No Sheets/ClickUp writes yet.** 13A/13B untouched. No DeleteObject. IAM: ListBucket + GetObject on requests/*, ListBucket + PutObject on results/*.\n\n**Model:** verify the model in the Gemini node is the one that worked for PHOTO_02.",
         "height": 610,
         "width": 825,
         "color": 5
@@ -257,8 +218,8 @@
       "type": "n8n-nodes-base.awsS3",
       "typeVersion": 2,
       "position": [
-        352,
-        688
+        640,
+        1040
       ],
       "credentials": {
         "aws": {
@@ -266,20 +227,8 @@
           "name": "YOUR aws credential"
         }
       },
-      "notes": "Runs once per date folder from 'Recent Date Folders'."
-    },
-    {
-      "parameters": {
-        "jsCode": "// Pending = validated request WITHOUT a result file in S3. S3 is the source of truth,\n// so requests that arrived while the laptop was offline are picked up on the next run.\nconst resultKeys = new Set($input.all().map(i => String(i.json?.Key || i.json?.key || '')).filter(Boolean));\nconst requests = $('Validate & Prepare Photo 13C').all();\nconst seen = new Set();\nconst pending = [];\nfor (const r of requests) {\n  const q = r.json;\n  const key = `maritime-incident-demo/results/${q.request_date_utc}/${q.photo_id}.json`;\n  if (resultKeys.has(key) || seen.has(key)) continue;\n  seen.add(key);\n  pending.push({ json: { ...q, expected_result_s3_key: key, result_not_found: true } });\n}\nreturn pending;"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        2160,
-        688
-      ],
-      "id": "c131ef62-947e-4872-9a90-e88e17774318",
-      "name": "Pending Only - No Result Yet"
+      "notes": "One date per loop pass. Always outputs (empty folder = 1 empty item).",
+      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -297,14 +246,14 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        64,
-        880
+        0,
+        960
       ],
       "disabled": true
     },
     {
       "parameters": {
-        "jsCode": "// The n8n S3 'Get Many' node lists ONE folder level (not sub-folders),\n// so we list each recent UTC date folder separately. Backlog window = LOOKBACK_DAYS.\nconst LOOKBACK_DAYS = 3; // today + 2 previous days\nconst out = [];\nfor (let d = 0; d < LOOKBACK_DAYS; d++) {\n  const date = new Date(Date.now() - d * 86400000).toISOString().slice(0, 10);\n  out.push({ json: { date, requests_prefix: `maritime-incident-demo/requests/${date}/` } });\n}\nreturn out;"
+        "jsCode": "// One item per recent UTC date. Each date is listed in its own loop pass,\n// because the n8n S3 'Get Many' node uses the FIRST item's folder for all items.\nconst LOOKBACK_DAYS = 3; // today + 2 previous days (backlog window)\nconst out = [];\nfor (let d = 0; d < LOOKBACK_DAYS; d++) {\n  const date = new Date(Date.now() - d * 86400000).toISOString().slice(0, 10);\n  out.push({ json: { date,\n    requests_prefix: `maritime-incident-demo/requests/${date}/`,\n    results_prefix: `maritime-incident-demo/results/${date}/` } });\n}\nreturn out;"
       },
       "id": "a1c2e3f4-0000-4000-8000-000000000002",
       "name": "Recent Date Folders (UTC)",
@@ -313,6 +262,72 @@
       "position": [
         208,
         880
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "a1c2e3f4-0000-4000-8000-000000000003",
+      "name": "Loop Over Dates",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        416,
+        880
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "bucketName": "YOUR_S3_BUCKET",
+        "returnAll": true,
+        "options": {
+          "folderKey": "={{ $('Loop Over Dates').first().json.results_prefix }}"
+        }
+      },
+      "id": "a1c2e3f4-0000-4000-8000-000000000004",
+      "name": "AWS S3 - List Results (same date)",
+      "type": "n8n-nodes-base.awsS3",
+      "typeVersion": 2,
+      "position": [
+        880,
+        1040
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "aws": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR aws credential"
+        }
+      },
+      "notes": "Runs once per loop pass. Needs ListBucket on results/."
+    },
+    {
+      "parameters": {
+        "jsCode": "// One summary item per date: which request files and result files exist.\nconst k = i => String(i.json?.Key || i.json?.key || '');\nconst date = $('Loop Over Dates').first().json.date;\nconst requests = $('AWS S3 - List Requests').all()\n  .map(i => ({ key: k(i), size: Number(i.json?.Size || i.json?.size || 0) })).filter(r => r.key);\nconst result_keys = $input.all().map(k).filter(Boolean);\nreturn [{ json: { date, requests, result_keys } }];"
+      },
+      "id": "a1c2e3f4-0000-4000-8000-000000000005",
+      "name": "Collect Date Keys",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        1040
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// DUPLICATE GUARD: keep only valid request files with NO result file yet.\n// S3 is the source of truth, so backlog from offline time is picked up next run.\nconst rx = /^maritime-incident-demo\\/requests\\/(\\d{4}-\\d{2}-\\d{2})\\/(PHOTO_0[1-8])\\.json$/;\nconst seen = new Set();\nconst out = [];\nfor (const it of $input.all()) {\n  const results = new Set(it.json.result_keys || []);\n  for (const r of it.json.requests || []) {\n    const m = r.key.match(rx);\n    if (!m || r.size <= 0 || r.size > 4096) continue;\n    const resultKey = `maritime-incident-demo/results/${m[1]}/${m[2]}.json`;\n    if (results.has(resultKey) || seen.has(r.key)) continue;\n    seen.add(r.key);\n    out.push({ json: { Key: r.key } });\n  }\n}\nreturn out;"
+      },
+      "id": "a1c2e3f4-0000-4000-8000-000000000006",
+      "name": "Pending Requests Only",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        688
       ]
     }
   ],
@@ -335,8 +350,37 @@
         ]
       ]
     },
+    "Schedule - Every 5 min (DISABLED)": {
+      "main": [
+        [
+          {
+            "node": "Recent Date Folders (UTC)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Recent Date Folders (UTC)": {
       "main": [
+        [
+          {
+            "node": "Loop Over Dates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Dates": {
+      "main": [
+        [
+          {
+            "node": "Pending Requests Only",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "AWS S3 - List Requests",
@@ -350,14 +394,36 @@
       "main": [
         [
           {
-            "node": "Filter Valid Request Keys",
+            "node": "AWS S3 - List Results (same date)",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Filter Valid Request Keys": {
+    "AWS S3 - List Results (same date)": {
+      "main": [
+        [
+          {
+            "node": "Collect Date Keys",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Date Keys": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Dates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pending Requests Only": {
       "main": [
         [
           {
@@ -380,28 +446,6 @@
       ]
     },
     "Validate & Prepare Photo 13C": {
-      "main": [
-        [
-          {
-            "node": "AWS S3 - List Existing Results",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "AWS S3 - List Existing Results": {
-      "main": [
-        [
-          {
-            "node": "Pending Only - No Result Yet",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Pending Only - No Result Yet": {
       "main": [
         [
           {
@@ -466,17 +510,6 @@
           }
         ]
       ]
-    },
-    "Schedule - Every 5 min (DISABLED)": {
-      "main": [
-        [
-          {
-            "node": "Recent Date Folders (UTC)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
     }
   },
   "active": false,
@@ -484,7 +517,7 @@
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "b3c4d5e6-0000-4000-8000-000000000005",
+  "versionId": "b3c4d5e6-0000-4000-8000-000000000006",
   "meta": {
     "templateCredsSetupCompleted": true
   },
