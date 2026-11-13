@@ -29,13 +29,13 @@ aws iam put-role-policy --role-name $ROLE --policy-name read-gemini-secret --pol
 echo "Naghihintay ng role (15s)..."; sleep 15
 
 echo "== 4. Lambda =="
-rm -f fn.zip; cd lambda && zip -q ../fn.zip lambda_function.py manual.json about.json && cd ..
+rm -f fn.zip; cd lambda && SECRET_ID=$SECRET python3 build_vectors.py && zip -q ../fn.zip lambda_function.py manual.json about.json && cd ..
 ROLE_ARN=arn:aws:iam::$ACCT:role/$ROLE
 if aws lambda get-function --function-name $FN --region $REGION >/dev/null 2>&1; then
   aws lambda update-function-code --function-name $FN --zip-file fileb://fn.zip --region $REGION >/dev/null
 else
   aws lambda create-function --function-name $FN --runtime python3.12 --handler lambda_function.handler \
-   --role $ROLE_ARN --zip-file fileb://fn.zip --timeout 30 --memory-size 256 --region $REGION \
+   --role $ROLE_ARN --zip-file fileb://fn.zip --timeout 30 --memory-size 1024 --region $REGION \
    --environment "Variables={SECRET_ID=$SECRET,GEN_MODEL=gemini-3.5-flash-lite,POLLY_VOICE=Salli,POLLY_ENGINE=neural}" >/dev/null
 fi
 aws lambda put-function-concurrency --function-name $FN --reserved-concurrent-executions 2 --region $REGION >/dev/null \
