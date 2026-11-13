@@ -1,0 +1,55 @@
+{
+"title": "MV HORIZON STAR - Vessel Safety Manual (DEMO / DUMMY DOCUMENT)",
+"pages": [
+{
+"page": 1,
+"section": "Cover and Notice",
+"text": "VESSEL SAFETY MANUAL (DUMMY) MV HORIZON STAR | Bulk Carrier TRAINING / DEMONSTRATION ONLY Fictional vessel, example locations and procedures. Not an approved SMS. Follow vessel-specific plans, muster list, posted instructions and company SMS."
+},
+{
+"page": 2,
+"section": "Contents & Document Control",
+"text": "Purpose A quick-reference learning document covering vessel areas, emergency drills, life-saving appliances (LSA), fire-fighting equipment (FFE), and ISPS access control. Intended for a dummy RAG knowledge base and safety familiarization exercises. Contents Page 3: Vessel overview and particulars Page 4: Vessel parts and locations Page 5: Emergency organization and alarms Page 6: Emergency drills and response Page 7: Life-Saving Appliances (LSA) Page 8: Fire-Fighting Equipment (FFE) Page 9: ISPS and access control Page 10: Reporting, checklists and limitations Document control Document ID: DEMO-SAF-001. Vessel: MV HORIZON STAR (fictional). Owner/operator: not assigned. Revision: 0. Prepared for educational demonstration. Review status: NOT APPROVED FOR OPERATIONAL USE. Important note Equipment quantities, locations, alarm patterns, drill frequencies and security arrangements vary by ship, flag, class and company. This document deliberately avoids asserting that the example arrangement meets statutory requirements."
+},
+{
+"page": 3,
+"section": "Vessel Overview",
+"text": "Fictional vessel particulars Name: MV HORIZON STAR (dummy). Type: geared bulk carrier. Length overall: approximately 180 m. Breadth: approximately 30 m. Main propulsion: diesel engine. Crew complement: example 22 persons. These figures are illustrative, not registered particulars. Typical operating areas Bridge and navigation deck; accommodation; galley and mess room; engine room and engine control room; main deck and cargo holds; forecastle/mooring station; aft mooring station; lifeboat embarkation deck. Operational safety principles Maintain safe access, correct PPE and good housekeeping. Conduct toolbox talks and risk assessments before non-routine jobs. Follow permit-to-work and isolation/lockout procedures where required. Key documents on a real vessel Approved general arrangement plan, fire control plan, muster list, LSA plan, ship security plan, emergency station bills, equipment manuals, and company safety management system (SMS)."
+},
+{
+"page": 4,
+"section": "Parts of the Vessel",
+"text": "Bridge / wheelhouse Navigation, communications, monitoring and vessel command. Access is controlled by the Master and watchkeeping procedures. Forecastle / bow Forward mooring equipment, windlass, anchors, chain lockers and working deck. Beware snap-back zones, moving ropes and pinch points. Cargo holds / hatch covers Bulk cargo spaces and hatch cover systems. Stay clear of unguarded openings and moving covers; confined-space entry requires specific authorization. Engine room Main engine, generators, pumps, piping and machinery. Typical hazards include hot surfaces, rotating parts, oil spills, noise and electrical energy. Accommodation / galley Cabins, corridors, stairways, mess room and food preparation. Keep escape routes clear; never put ordinary metal cutlery in a microwave unless explicitly permitted by its manufacturer. Aft / poop deck Aft mooring arrangements, steering gear access and associated deck fittings. Apply mooring safety precautions."
+},
+{
+"page": 5,
+"section": "Emergency Organization & Alarms",
+"text": "Muster list The vessel-specific muster list assigns each crew member an emergency station and duties. All crew must know their station, alternate escape route and reporting chain. Alarm recognition Learn the actual alarm signals from posted vessel instructions. Do not rely on this dummy manual for the ship-specific general emergency, abandon-ship or fire alarm patterns. Initial response Raise the alarm promptly, report the exact location and hazard, and follow the bridge/emergency team instructions. Protect yourself first; do not attempt rescue or firefighting beyond your training. Communications Use approved internal communications, emergency telephones, radios and established reporting phrases. State location, nature of emergency, persons at risk and assistance needed. Accountability At muster, team leaders verify personnel against the muster list and promptly report anyone missing to the designated command team."
+},
+{
+"page": 6,
+"section": "Emergency Drills",
+"text": "Fire drill Practice alarm response, mustering, team communications, boundary control and equipment familiarization. Simulate fire response unless authorized for live practical training. Abandon ship drill Practice reporting to muster stations, lifejacket checks, lifeboat/raft familiarization and orderly embarkation procedures under competent supervision. Man overboard drill Practice raising the alarm, maintaining visual contact, notifying the bridge and rehearsing recovery coordination. Only designated personnel deploy rescue equipment. Oil spill drill Practice notification, source isolation when safe, spill containment planning and pollution reporting. Do not handle unknown substances without protection. Security and medical drills Practice suspicious-person reporting, controlled access, medical notification and casualty response. Actual schedules and requirements must follow applicable regulations and the SMS. After-action review Record scenario, participants, observations, deficiencies, corrective actions, owners and close-out dates."
+},
+{
+"page": 7,
+"section": "Life-Saving Appliances (LSA)",
+"text": "Common equipment Survival craft such as lifeboats and liferafts; lifejackets; lifebuoys; immersion suits where required; emergency position-indicating radio beacon (EPIRB); search and rescue transponder (SART/AIS-SART); visual distress signals. Location awareness Locate survival craft stations, lifejacket stowage, embarkation areas and posted instructions using the actual ship LSA plan. Do not assume equipment is installed where this dummy text suggests. Pre-use checks Inspect for obvious damage, accessibility, correct stowage and service status within assigned duties. Never tamper with release gear or survival craft launching equipment. Training rule Launching, release-gear operation, pyrotechnics and radio distress equipment require authorized, vessel-specific instruction and supervision."
+},
+{
+"page": 8,
+"section": "Fire-Fighting Equipment (FFE)",
+"text": "Typical FFE Portable extinguishers, fire hoses/hydrants, fire detection and alarms, fixed extinguishing systems, emergency fire pump, fire doors/dampers, breathing apparatus and firefighter outfits where fitted. Fire prevention Control ignition sources; maintain housekeeping; report oil leaks and damaged electrical equipment. Keep extinguishers, hydrants and escape routes unobstructed. Galley microwave example Metal utensils may cause electrical arcing and fire. If fire starts inside a microwave, stop operation and isolate power if safe, keep the door closed, raise the alarm, and follow ship emergency procedures. Extinguisher use Use only the correct extinguisher for the fire type and only if trained, safe and with a clear escape route. Do not apply water to energized electrical equipment. Fixed systems warning Never release a fixed extinguishing agent without the authorized command process, evacuation/accountability checks and vessel-specific instructions."
+},
+{
+"page": 9,
+"section": "ISPS Access Control & Security",
+"text": "ISPS overview The International Ship and Port Facility Security (ISPS) Code establishes a framework for ship and port facility security. The Ship Security Officer (SSO) implements applicable shipboard security measures under the approved Ship Security Plan. Gangway / access point Use a designated access point with an assigned watch when required. Verify authorization, record visitors according to ship procedures, issue identification where applicable and coordinate escorts. Restricted areas Examples may include bridge, machinery spaces, security-related stores and designated control rooms. Access rules must come from the actual approved Ship Security Plan. Suspicious activity Do not confront a suspected threat unnecessarily. Notify the watch, SSO or Master using established reporting channels and preserve safety. Security levels Know the vessel current security level and follow the specific measures communicated by authorized officers. Do not publish sensitive Ship Security Plan details."
+},
+{
+"page": 10,
+"section": "Safety Reporting & Quick Checklist",
+"text": "Before starting work Confirm authorization and toolbox talk; understand hazards and controls; use correct PPE; check access, lighting and escape route; verify equipment condition and required permits. Reportable observations Wet stairs without warning, tangled mooring ropes, oil leakage, open hatch edges, missing PPE, cables across walkways, blocked fire equipment and galley electrical hazards. Near-miss report template Date/time: ______ Location: ______ Observed hazard: ______ Immediate safe action: ______ Persons informed: ______ Corrective action: ______ Close-out: ______ Daily safety reminders Know your muster station. Keep emergency equipment accessible. Stop unsafe work and inform supervision. Maintain security at access points. Report hazards early. Critical limitation This manual is fictional training material only. It is not a substitute for the approved SMS, Ship Security Plan, statutory documents, manufacturer instructions, vessel-specific training or professional judgment."
+}
+]
+}

@@ -1,0 +1,301 @@
+{
+ "title": "Chryspyl Nolledo portfolio (for Maris)",
+ "pages": [
+  {
+   "page": 1,
+   "section": "About Chryspyl",
+   "text": "Chryspyl Nolledo is a Chief Officer with a Master Mariner license, from San Pedro, Laguna, Philippines. He started at sea in 2000 as a deckboy and worked up to Chief Officer, a role he held from 2013 to 2026. His last vessel was 2GO Masigla. He graduated BS Marine Transportation from PMI Colleges, Manila, in 2001. He is now looking for remote and shore-based roles."
+  },
+  {
+   "page": 2,
+   "section": "Work he is looking for",
+   "text": "Ashore, Chryspyl focuses on written, detail-driven work: PMS (planned maintenance) monitoring and reporting, QHSE and SOP documentation, food safety systems, data cleaning, dashboards, and workflow automation that removes manual follow-ups. He prefers written communication and works well remotely. He is available now."
+  },
+  {
+   "page": 3,
+   "section": "Contact",
+   "text": "Chryspyl prefers written communication. Visitors can contact him through Upwork or the Contact section of this website. Maris does not give phone numbers."
+  },
+  {
+   "page": 4,
+   "section": "Experience at sea",
+   "text": "As Chief Officer, Chryspyl was responsible for deck maintenance and the Planned Maintenance System, cargo and stability, safety equipment (LSA and FFE), and ship security as the designated Ship Security Officer (SSO). He did iAuditor (SafetyCulture) pre-loading, pre-arrival and weekly inspections, and AMSA Marine Order 43 livestock vessel preparation. Earlier, as Third Mate and Second Mate, he handled navigation watch, charts and publications, and safety equipment."
+  },
+  {
+   "page": 5,
+   "section": "Skills",
+   "text": "Featured skills: PMS monitoring and reporting; workflow automation with n8n; AWS cloud (S3, Lambda, DynamoDB, SNS, IAM, CloudFront) set up with least privilege and a budget; document reading (OCR) with Amazon Textract; SOP and technical writing in ISM Code / SMS style; data cleaning in Excel; dashboards in Power BI, Looker Studio and SQL; AI agents with n8n and Gemini; and food safety programs (HACCP, SSOP, GMP)."
+  },
+  {
+   "page": 6,
+   "section": "Portfolio highlights",
+   "text": "PMS Overdue Dashboard (Excel, Word, S3, Athena) for about 40 deck items. SOP pack with an Enclosed Space Entry procedure in SMS style. PMS data cleaning of a messy maintenance export. A Trim and Stability Calculator with worked solutions in Taglish for maritime students. A Food Safety Program (HACCP, SSOP, GMP) for a fish buying station, recognized by BFAR and written with AI assistance. All portfolio samples use realistic dummy data, not company or vessel data."
+  },
+  {
+   "page": 7,
+   "section": "AWS cloud projects",
+   "text": "Ten hands-on AWS projects: 01 this portfolio website (S3, CloudFront); 02 ship stability audio lessons (Polly); 03 photo checker (Rekognition); 04 PMS Document Reader (Textract, DynamoDB, SNS) that read a crane parts list with 14 of 14 part numbers correct; 04B Cargo Release Check (DynamoDB Streams, SNS); 05 About Me and Solar Shop chatbots (Lex, Polly, Translate); 06 multilingual review analyzer (Comprehend); 07 fish sales dashboard (Athena, SQL); 08 cost and security monitor (Budgets, CloudTrail, MFA); 09 workflow automation."
+  },
+  {
+   "page": 8,
+   "section": "Automation, dashboards and business apps",
+   "text": "n8n automations: PMS reminders, ClickUp task sync, a Fleet Ops tracker with daily alerts, a website inquiry auto-reply, and email-to-AWS uploads. Dashboards: Power BI for fleet maintenance and fish trading sales, and a live Looker Studio dashboard fed by n8n and ClickUp. Business apps: SunGuard e-commerce automation with an AI sales agent, a Shopify store, and Odoo ERP integrations built with n8n."
+  },
+  {
+   "page": 9,
+   "section": "AI projects",
+   "text": "13A Maritime Incident Report with Gemini Vision: a safety photo and description become a structured draft that an officer must approve before a ClickUp CAPA task is created. 13B CAPA closing sync checks ClickUp and closes finished items in Google Sheets. 13C Maritime Incident Intake on AWS: a live website demo using Lambda, a private S3 queue, n8n and Gemini Vision. 14 Vessel Safety Manual Assistant: Maris answers questions from a dummy ship safety manual using RAG on AWS Lambda with Gemini, and cites the page. AI drafts are never treated as final decisions."
+  },
+  {
+   "page": 10,
+   "section": "About Maris",
+   "text": "Maris is the AI assistant on this portfolio. MARIS stands for Maintenance, Automation, Reporting, Intelligence and Safety. She answers questions about Chryspyl's experience and projects, in English or Taglish. Her answers come from AWS Lambda with Google Gemini, and her voice comes from Amazon Polly. She is a demo assistant, so she only answers from the portfolio information."
+  },
+  {
+   "page": 11,
+   "tab": "ai",
+   "section": "AI Projects page overview",
+   "text": "AI Projects. Maritime safety workflows built and tested with AI assistance, automation, and dummy incident data. Three connected demos (incident reporting, CAPA closure tracking, an AWS website intake you can try), plus Maris, an AI assistant that answers from a vessel safety manual. Projects on the AI Projects page: 13A ·; 13B ·; 13C ·; 14 · Safety Manual Assistant (RAG) Live demo."
+  },
+  {
+   "page": 12,
+   "tab": "ai",
+   "section": "AI Projects: 13A · Maritime Incident Report + Photo Check AI Completed local demo",
+   "text": "Project on the AI Projects page. 13A · Maritime Incident Report + Photo Check AI Completed local demo n8n · Gemini Vision · Google Sheets · Gmail · ClickUp · AI-assisted Local incident form + image → Validation → Gemini Vision draft → Google Sheets + officer email → Approval → ClickUp CAPA task A local form accepts one JPG/PNG safety image, a crew description, a location and a report type. Gemini Vision prepares a structured draft with observations, proposed severity, 5 Whys, evidence limitations, and corrective/preventive actions. The draft is recorded in Google Sheets and sent by Gmail for an officer to review. After an officer marks the record Approved, a separate step creates a tracked CAPA task in ClickUp and updates the sheet. The workflow includes input checks and duplicate protection. 1 · Report Upload a sample photo and describe the hazard 2 · AI draft Check visible evidence and generate structured JSON 3 · Officer review Approval required before CAPA task creation 4 · Follow-up Track approved corrective actions in ClickUp"
+  },
+  {
+   "page": 13,
+   "tab": "ai",
+   "section": "AI Projects: 13B · Maritime CAPA Closing Sync Completed local demo",
+   "text": "Project on the AI Projects page. 13B · Maritime CAPA Closing Sync Completed local demo n8n · Google Sheets · ClickUp · Scheduled Polling · Duplicate Protection Approved CAPA in Google Sheets → n8n scheduled check → ClickUp task status → Update row to Closed Every five minutes while the local n8n service is running, this workflow checks open CAPAs and reads the matching ClickUp task. Only completed tasks lead to the incident record being marked Closed in Google Sheets. Tasks still in progress are left open; already-closed entries are skipped. The process was tested with fictional cases and completion status changes. Open maritime safety dashboard Dashboard access depends on its sharing settings. Screenshot above remains available as demo evidence."
+  },
+  {
+   "page": 14,
+   "tab": "ai",
+   "section": "AI Projects: 13C · Maritime Incident Intake on AWS Tested end to end Live demo",
+   "text": "Project on the AI Projects page. 13C · Maritime Incident Intake on AWS Tested end to end Live demo AWS Lambda · S3 · CloudFront · IAM · n8n · Gemini Vision · Google Sheets · ClickUp Website form → Lambda Function URL → Private S3 queue → n8n + Gemini Vision → S3 result + website → 13A sheet + officer email → 13A CAPA · 13B closing A public web page lets a visitor pick one of the 8 fictional safety photos. AWS Lambda checks the request and stores it in a private S3 queue. The self-hosted n8n workflow lists the queue one date at a time, skips anything that already has a result, asks Gemini Vision for a structured draft, and saves it back to S3, where the page picks it up. The same draft is added to the 13A incident sheet and emailed to the officer, so the existing 13A approval and 13B closing workflows handle it without changes. Tested end to end: website request, AI draft, officer approval, ClickUp CAPA, and closure. Cost guard One draft per photo per day, so at most 8 AI calls daily, plus a $5 budget alarm Safe by design No uploads, private S3, read-only IAM, CORS limited to this site, on/off switch No duplicates An existing S3 result means no second Gemini call Backlog aware Requests made while n8n is offline are processed when it is back Try the live demo New drafts are created only while the self-hosted n8n server is running. Otherwise requests wait in the queue and drafts already made today show at once."
+  },
+  {
+   "page": 15,
+   "tab": "ai",
+   "section": "AI Projects: 14 · Safety Manual Assistant (RAG) Live demo Talking avatar",
+   "text": "Project on the AI Projects page. Vessel Safety Manual Assistant with Maris Crew often need one clear answer from a long safety manual. This demo lets anyone ask a question in English or Taglish and get a short answer that cites the manual page. The manual is a 10-page dummy for a fictional bulk carrier, MV Horizon Star. 14 · Safety Manual Assistant (RAG) Live demo Talking avatar AWS Lambda · Gemini embeddings + Gemini Flash-Lite · Amazon Polly (Neural) · Secrets Manager · S3 · CloudFront Question (English or Taglish) → Lambda Function URL → Find the 3 closest manual pages → Gemini answers only from those pages → Polly voice + Maris video The manual is split by page and turned into embeddings. When a question comes in, Lambda finds the closest pages and Gemini writes a short answer only from those pages , with the page number. If the answer is not in the manual, Maris says so instead of guessing; for example, she will not give an adobo recipe. Common short forms such as SSP, SSO, LSA, FFE, EPIRB and PTW are expanded before the search. English questions get English answers; Tagalog or Taglish questions get Taglish answers. Maris reacts while she works: thinking while searching, serious for safety topics, and apologetic when the answer is not in the manual. Her voice is Amazon Polly Neural. Grounded Answers only from the manual and cites the page Honest Says \"not in the manual\" instead of guessing Key kept safe Gemini API key in Secrets Manager, never in the website Cost guard 300-character question limit, CORS limited to this site, $5 budget alarm Try the live demo Maris also answers questions about this portfolio in the chat window at the bottom right of each page. Demo scope: fictional vessel and a dummy 10-page manual. Not for real operations; always follow the official procedure and the Master's inst"
+  },
+  {
+   "page": 16,
+   "tab": "automation",
+   "section": "Workflow Automation page overview",
+   "text": "Automation Projects (n8n). Workflows that remove manual follow-ups: daily reminders, alert digests, task boards that update themselves, automatic replies to customers and file uploads to the cloud. Built for shipping, and each one notes where else it fits. Projects on the Workflow Automation page: Fleet Ops Tracker; SunGuard Solar & CCTV (demo shop); 07 Website Inquiry Auto-Reply; 05 Fleet Ops Daily Alert; 04 Fleet Ops Sample Alert Sign-up; 08 + 09 PMS Jobs in ClickUp; 02 Fleet PMS Reminder; 06 Change Request to AWS; 03 Customer Inquiry Form; 00 Error Alert."
+  },
+  {
+   "page": 17,
+   "tab": "automation",
+   "section": "Workflow Automation: Fleet Ops Tracker",
+   "text": "Project on the Workflow Automation page. Fleet Ops Tracker Google Sheets · Apps Script · n8n RightShip, hull cleaning and off-hire in one place, with a \"Get alerts\" sign-up and a tab showing how the same tracker works for other industries. Open the app"
+  },
+  {
+   "page": 18,
+   "tab": "automation",
+   "section": "Workflow Automation: SunGuard Solar & CCTV (demo shop)",
+   "text": "Project on the Workflow Automation page. SunGuard Solar & CCTV (demo shop) Apps Script · Google Sheets · n8n · Gmail A fictional shop page with a live inquiry form. Send an inquiry with your own email and the automatic reply arrives in about 5 minutes. Open the app"
+  },
+  {
+   "page": 19,
+   "tab": "automation",
+   "section": "Workflow Automation: 07 Website Inquiry Auto-Reply Live",
+   "text": "Project on the Workflow Automation page. 07 Website Inquiry Auto-Reply Live Apps Script · Google Sheets · n8n · Gmail Website form → Apps Script → Google Sheets → n8n every 5 min → Gmail reply → email removed A customer fills in the form on a demo solar and CCTV shop page. The inquiry is logged at once, and n8n sends a written reply within about 5 minutes, then deletes the email address from the list. Also fits: clinics and dental offices, real estate, tutoring centers, repair shops, any small business website. Open the app"
+  },
+  {
+   "page": 20,
+   "tab": "automation",
+   "section": "Workflow Automation: 05 Fleet Ops Daily Alert App",
+   "text": "Project on the Workflow Automation page. 05 Fleet Ops Daily Alert App Schedule · Google Sheets · Code · IF · Gmail Daily 7 AM → RightShip + Hull + Off-hire → check rules → any alerts? → one digest email Every morning, three sheets are checked: RightShip inspection windows, hull cleaning due dates and off-hire records. One summary email goes out only when something needs action. Also fits: logistics (truck registration, permits), construction (permit and certificate expiry), HR (license expiry), property rentals (lease end dates). Open the app"
+  },
+  {
+   "page": 21,
+   "tab": "automation",
+   "section": "Workflow Automation: 04 Fleet Ops Sample Alert Sign-up",
+   "text": "Project on the Workflow Automation page. 04 Fleet Ops Sample Alert Sign-up Schedule · Google Sheets · Gmail Sign-up form → Google Sheets → n8n every 15 min → sample email → mark Sent, delete email Visitors of the Fleet Ops Tracker can ask for a sample alert. n8n picks up new sign-ups every 15 minutes, sends the sample, marks the row as sent and deletes the address. Also fits: newsletter or demo requests, webinar sign-ups, quote requests. Try it in the app →"
+  },
+  {
+   "page": 22,
+   "tab": "automation",
+   "section": "Workflow Automation: 08 + 09 PMS Jobs in ClickUp New",
+   "text": "Project on the Workflow Automation page. 08 + 09 PMS Jobs in ClickUp New Schedule · Google Sheets · Filter · ClickUp · If · Google Sheets Daily 7 AM → PMS sheet → overdue / due in 7 days → ClickUp task → task ID saved Every 15 min → open tasks → Complete? → Last Done = today → next Due Date = today + interval Two workflows close the maintenance loop. Every morning, each overdue or due-soon job becomes a ClickUp task with the vessel, job number, due date and priority. The task ID is written back to the sheet, so a job never gets a second task. When the crew marks a task Complete, the sheet records the date done and moves the due date forward by the job's interval, ready for the next cycle. In testing: 6 tasks created from 10 jobs, no duplicates on the second run, and the windlass greasing job moved from 26 Oct to 1 Dec after it was completed. Also fits: fleet and equipment maintenance, facilities work orders, compliance renewals, any team that tracks recurring jobs in a sheet but works from a task board (Asana, Trello or Monday work the same way)."
+  },
+  {
+   "page": 23,
+   "tab": "automation",
+   "section": "Workflow Automation: 02 Fleet PMS Reminder",
+   "text": "Project on the Workflow Automation page. 02 Fleet PMS Reminder Schedule · Google Sheets · Edit Fields · Switch · Gmail Daily 7 AM → PMS sheet → days left → overdue / due soon / OK → email the right person Reads the planned maintenance sheet each morning and works out the days left for each job. Overdue jobs go to the Superintendent, jobs due soon go to the Chief Officer, and the rest are left alone. Also fits: vehicle and equipment fleets, building and facilities maintenance, calibration of lab or medical equipment."
+  },
+  {
+   "page": 24,
+   "tab": "automation",
+   "section": "Workflow Automation: 06 Change Request to AWS",
+   "text": "Project on the Workflow Automation page. 06 Change Request to AWS Gmail Trigger · AWS S3 · Gmail Email with PDF → n8n → S3 incoming/ → Lambda + Textract → DynamoDB → reply to ship The ship emails a parts list. n8n saves the attachment to an S3 folder, which starts the Project 04 reader (Lambda and Textract) and fills the parts table in DynamoDB. The ship gets a reply that the file was received. The n8n user can only upload, nothing else. Also fits: invoices for accounting, purchase orders, delivery receipts in logistics, scanned forms in HR."
+  },
+  {
+   "page": 25,
+   "tab": "automation",
+   "section": "Workflow Automation: 03 Customer Inquiry Form",
+   "text": "Project on the Workflow Automation page. 03 Customer Inquiry Form Form Trigger · Google Sheets · Gmail n8n form → Google Sheets → Gmail auto-reply The first version of the inquiry flow, using the n8n built-in form: each inquiry is saved to a sheet and the customer gets an automatic reply. Also fits: event registration, service requests, simple order forms."
+  },
+  {
+   "page": 26,
+   "tab": "automation",
+   "section": "Workflow Automation: 00 Error Alert",
+   "text": "Project on the Workflow Automation page. 00 Error Alert Error Trigger · Gmail any workflow fails → Error Trigger → email with details If any scheduled workflow fails, an email arrives with the workflow name, the node that failed and the error message, so a problem is not missed. Also fits: any automation that runs unattended."
+  },
+  {
+   "page": 27,
+   "tab": "business",
+   "section": "Business Apps page overview",
+   "text": "Business Apps. Small-business systems built with automation, AI and ERP, using dummy data. Workflow files are on GitHub . Projects on the Business Apps page: SunGuard E-commerce Automation; SunGuard AI Sales Agent; SunGuard Shopify Store + n8n; Shopify → Odoo ERP Sync (SunGuard); SeaLink Ship Spares: Odoo Logistics Brief."
+  },
+  {
+   "page": 28,
+   "tab": "business",
+   "section": "Business Apps: SunGuard E-commerce Automation Working local demo",
+   "text": "Project on the Business Apps page. SunGuard E-commerce Automation Working local demo n8n · Google Sheets · Apps Script · Telegram · AWS S3 Order form (S3) → Apps Script → Google Sheets → n8n 10B (validate product, price and stock → deduct stock) → Telegram alert Website orders are checked against live inventory, stock is updated automatically, and the owner gets a Telegram alert. Try the order form Low-stock alert (Telegram): when an order brings a product to or below its Low_Stock_Threshold, n8n sends the owner a Telegram message, for example: \"Low stock: 1000W Solar Inverter (SG-004) is down to 3 units. Reorder level is 3.\""
+  },
+  {
+   "page": 29,
+   "tab": "business",
+   "section": "Business Apps: SunGuard AI Sales Agent AI Agent",
+   "text": "Project on the Business Apps page. SunGuard AI Sales Agent AI Agent n8n AI Agent · Google Gemini · Google Sheets tool · Memory Customer chat → AI Agent → Decides when to call Inventory tool (Google Sheets) → Answers price and stock The agent looks up live stock only when needed, remembers the conversation, will not give discounts or take orders, and sends customers to the order form. Example: asked for 10 inverters, it found only 6 in stock and pointed to the order form."
+  },
+  {
+   "page": 30,
+   "tab": "business",
+   "section": "Business Apps: SunGuard Shopify Store + n8n Working local demo",
+   "text": "Project on the Business Apps page. SunGuard Shopify Store + n8n Working local demo Shopify Admin API (GraphQL) · n8n · Google Sheets · Telegram Shopify order → n8n every 15 min → New orders only → Orders sheet → Telegram alert New Shopify orders are pulled automatically and added to the order sheet once. Orders already in the sheet are skipped, so the workflow is safe to run again and again."
+  },
+  {
+   "page": 31,
+   "tab": "business",
+   "section": "Business Apps: Shopify → Odoo ERP Sync (SunGuard) System integration",
+   "text": "Project on the Business Apps page. Shopify → Odoo ERP Sync (SunGuard) System integration Odoo 18 (Docker) · JSON-RPC API · n8n · Shopify · Telegram Shopify order → n8n → Odoo sales order (confirmed) → Delivery order → Stock updated in Odoo → Telegram Odoo becomes the single source of truth for stock. Each Shopify order is created and confirmed as an Odoo sales order in the right company, with a SHOPIFY-<order no> reference so the same order is never created twice."
+  },
+  {
+   "page": 32,
+   "tab": "business",
+   "section": "Business Apps: SeaLink Ship Spares: Odoo Logistics Brief Maritime logistics",
+   "text": "Project on the Business Apps page. SeaLink Ship Spares: Odoo Logistics Brief Maritime logistics Odoo 18 Inventory · n8n · Telegram · multi-company Odoo transfers + stock → n8n daily 7 AM → Shortages, due deliveries, receipts, low stock → Telegram brief A fictional ship-spares supplier delivering to vessels. Every morning the team gets one brief: deliveries due in 48 hours, parts that are short for a vessel, supplier receipts coming in, and spares below their minimum level, so purchase orders are raised before the ship arrives."
+  },
+  {
+   "page": 33,
+   "tab": "aws",
+   "section": "AWS Projects page overview",
+   "text": "AWS Cloud Projects. Ten hands-on projects using core AWS services, built around shipping, fish trading and small-business problems. Each one notes its cost and security setup. Projects on the AWS Projects page: PMS Change Request Desk; Cargo Release Check (Ro-Pax); 01 Portfolio Website; 02 Ship Stability Audio Lessons; 03 Photo Checker: Safety Gear & Solar Parts; 04 PMS Document Reader; 04B Cargo Release Check; 05 AI Chatbots: About Me & Solar Shop; 06 Multilingual Review Analyzer; 07 Fish Sales Dashboard; 08 AWS Cost & Security Monitor; 09 Workflow Automation; 10 Web Server; 13C."
+  },
+  {
+   "page": 34,
+   "tab": "aws",
+   "section": "AWS Projects: PMS Change Request Desk",
+   "text": "Project on the AWS Projects page. PMS Change Request Desk Built on Project 04 · S3 · Lambda · Textract · DynamoDB · SNS The office side of planned maintenance: review change requests from the ship, check overdue jobs and spares below minimum, and run a sample parts list through the Textract flow. Open the app Read the write-up →"
+  },
+  {
+   "page": 35,
+   "tab": "aws",
+   "section": "AWS Projects: Cargo Release Check (Ro-Pax)",
+   "text": "Project on the AWS Projects page. Cargo Release Check (Ro-Pax) Built on Project 04B · DynamoDB Streams · Lambda · SNS Tick payment and B/L endorsement per unit, then release. Every change is checked against the release rules and raises the same alerts the Lambda function sends. Open the app Read the write-up →"
+  },
+  {
+   "page": 36,
+   "tab": "aws",
+   "section": "AWS Projects: 01 Portfolio Website",
+   "text": "Project on the AWS Projects page. 01 Portfolio Website S3 · CloudFront · IAM This site: a static website in Amazon S3, served worldwide through CloudFront with HTTPS. Updates are uploaded from AWS CloudShell. Main page →"
+  },
+  {
+   "page": 37,
+   "tab": "aws",
+   "section": "AWS Projects: 02 Ship Stability Audio Lessons",
+   "text": "Project on the AWS Projects page. 02 Ship Stability Audio Lessons Amazon Polly · S3 · CloudFront Four plain-English lessons on KG, KM, GM, trim, hull stresses and free surface effect, voiced with Amazon Polly, with read-along scripts. Listen to the lessons →"
+  },
+  {
+   "page": 38,
+   "tab": "aws",
+   "section": "AWS Projects: 03 Photo Checker: Safety Gear & Solar Parts",
+   "text": "Project on the AWS Projects page. 03 Photo Checker: Safety Gear & Solar Parts S3 · Lambda · Rekognition · DynamoDB 14 photos checked on upload. Text detection beat appearance (7 vs 4 of 14), four safety items were mislabelled as weapons, and a battery spec check (V × Ah = kWh) passed. See the results →"
+  },
+  {
+   "page": 39,
+   "tab": "aws",
+   "section": "AWS Projects: 04 PMS Document Reader App",
+   "text": "Project on the AWS Projects page. 04 PMS Document Reader App S3 · Lambda · Textract · DynamoDB · SNS A scanned provision crane parts list read automatically: 14 of 14 part numbers correct, every part saved, and the 4 spares below minimum emailed for requisition. See the results → Open the app →"
+  },
+  {
+   "page": 40,
+   "tab": "aws",
+   "section": "AWS Projects: 04B Cargo Release Check App",
+   "text": "Project on the AWS Projects page. 04B Cargo Release Check App DynamoDB Streams · Lambda · SNS Cargo leaves the ship only after payment and B/L endorsement. Units cleared, endorsed out of sequence, or released without payment trigger an email to the right person. See the results → Open the app →"
+  },
+  {
+   "page": 41,
+   "tab": "aws",
+   "section": "AWS Projects: 05 AI Chatbots: About Me & Solar Shop",
+   "text": "Project on the AWS Projects page. 05 AI Chatbots: About Me & Solar Shop Lex · Lambda · Polly · Translate One chat button, two bots: an About Me bot with voice and an animated avatar, and a solar shop demo that replies in Tagalog, Bisaya, Chinese or English. See how it works →"
+  },
+  {
+   "page": 42,
+   "tab": "aws",
+   "section": "AWS Projects: 06 Multilingual Review Analyzer",
+   "text": "Project on the AWS Projects page. 06 Multilingual Review Analyzer Lambda · Comprehend · Translate · DynamoDB Customer reviews of tuna, mahi-mahi and squid in English, Tagalog, Cebuano and Chinese, sorted by sentiment in one run. Shows where AWS falls short on Cebuano. See the results →"
+  },
+  {
+   "page": 43,
+   "tab": "aws",
+   "section": "AWS Projects: 07 Fish Sales Dashboard",
+   "text": "Project on the AWS Projects page. 07 Fish Sales Dashboard S3 · Athena · SQL Three months of fish trading sales queried with SQL and checked in Excel. Exporters bring 56% of revenue, squid up 40%, mahi-mahi down 52%. View the dashboard →"
+  },
+  {
+   "page": 44,
+   "tab": "aws",
+   "section": "AWS Projects: 08 AWS Cost & Security Monitor",
+   "text": "Project on the AWS Projects page. 08 AWS Cost & Security Monitor Budgets · CloudTrail · IAM · MFA A $5 budget on real usage, anomaly detection, a CloudTrail audit trail, and daily work moved off the root user to an MFA-protected IAM user. See the setup →"
+  },
+  {
+   "page": 45,
+   "tab": "aws",
+   "section": "AWS Projects: 09 Workflow Automation",
+   "text": "Project on the AWS Projects page. 09 Workflow Automation n8n · Google Sheets · Gmail · S3 · Textract Scheduled alerts, a live inquiry auto-reply and an email-to-S3 upload that feeds the Project 04 reader. Has its own page. View automations →"
+  },
+  {
+   "page": 46,
+   "tab": "aws",
+   "section": "AWS Projects: 10 Web Server",
+   "text": "Project on the AWS Projects page. 10 Web Server EC2 · VPC · Load Balancer · RDS Planned: a small web app on EC2 behind a load balancer, with a database in RDS."
+  },
+  {
+   "page": 47,
+   "tab": "aws",
+   "section": "AWS Projects: 13C Maritime Incident Intake",
+   "text": "Project on the AWS Projects page. 13C Maritime Incident Intake Lambda Function URL · S3 · CloudFront · IAM · n8n · Gemini A website form sends one of 8 fictional safety photos to Lambda, which queues it in private S3. n8n creates a Gemini Vision draft and the page shows the result. Capped at 8 AI drafts a day. Part of the AI Projects page. See the project → Try the live demo →"
+  },
+  {
+   "page": 48,
+   "tab": "data",
+   "section": "Data & Dashboards page overview",
+   "text": "Data & Dashboards. Three dashboards built from dummy data: two in Power BI Desktop and one live in Looker Studio that updates itself when n8n or ClickUp changes the source sheet. Projects on the Data & Dashboards page: Fleet PMS Live Dashboard; Fleet PMS Dashboard; Fish Trading Sales & Reviews."
+  },
+  {
+   "page": 49,
+   "tab": "data",
+   "section": "Data & Dashboards: Fleet PMS Live Dashboard Live",
+   "text": "Project on the Data & Dashboards page. Live dashboard Fleet PMS Live Dashboard Live Looker Studio · Google Sheets · n8n · ClickUp Fleet PMS sheet → n8n / ClickUp updates → Looker Studio → this page Connected live to the Fleet PMS Google Sheet. When a job is closed in ClickUp, n8n updates the sheet and this dashboard changes on its own. Calculated fields work out Days Left, Status (Overdue, Due soon, OK) and % Overdue. Use the Vessel filter to see one ship. Open full screen View only. Downloading and copying are turned off, and contact fields in the sheet are not shown."
+  },
+  {
+   "page": 50,
+   "tab": "data",
+   "section": "Data & Dashboards: Fleet PMS Dashboard",
+   "text": "Project on the Data & Dashboards page. Fleet PMS Dashboard Power BI Desktop · Power Query · DAX Planned maintenance jobs for two vessels. Cards show total, overdue and due-soon jobs and % overdue. A bar chart shows overdue jobs per vessel, a donut shows job status, and the job table turns red when a job is overdue. Slicers filter by vessel and by who is responsible. 10 Jobs tracked 5 Overdue 50% Overdue rate 2 Vessels DAX measures used: Days Left, Status (SWITCH), Total Jobs, Overdue Jobs, Due Soon and % Overdue (DIVIDE). Download PDF →"
+  },
+  {
+   "page": 51,
+   "tab": "data",
+   "section": "Data & Dashboards: Fish Trading Sales & Reviews",
+   "text": "Project on the Data & Dashboards page. Fish Trading Sales & Reviews Power BI Desktop · DAX · Date table · Relationships Three months of sales for tuna, mahi-mahi and squid, with customer review sentiment in the same report. A separate date table drives the monthly trend, and clicking any chart filters the rest. ₱4.59M Revenue, Jul–Sep 16,929 kg Sold ₱271 Average price per kg 56% Revenue from exporters 27% Negative reviews Findings: exporters bring more than half of revenue, mahi-mahi sales fell 52% from July to September, and squid grew 40% from August to September. Download PDF →"
+  }
+ ]
+}

@@ -1,0 +1,71 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Project 14 - Vessel Safety Manual Assistant with Maris (DEMO)</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:system-ui,sans-serif;max-width:960px;margin:0 auto;padding:16px;background:#0f1b2d;color:#e8eef7}
+h1{font-size:1.3rem;margin:4px 0 6px} .note{font-size:.85rem;opacity:.8;margin:0 0 14px}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px;align-items:start}
+@media (max-width:760px){.wrap{grid-template-columns:1fr}}
+.maris{background:#16263f;border-radius:12px;overflow:hidden;position:relative}
+.maris video{width:100%;aspect-ratio:16/9;display:block;background:#0b1424;object-fit:cover}
+.snd{position:absolute;right:10px;top:10px;background:rgba(15,27,45,.8);border:1px solid #3b5278;border-radius:12px;padding:3px 10px;font:inherit;font-size:.8rem;color:#e8eef7;cursor:pointer}
+.tag{position:absolute;left:10px;top:10px;background:rgba(15,27,45,.8);border:1px solid #3b5278;border-radius:12px;padding:3px 10px;font-size:.8rem}
+.chips button{margin:4px 4px 0 0;padding:6px 10px;border-radius:14px;border:1px solid #3b5278;background:#16263f;color:#cfe0ff;cursor:pointer;font:inherit;font-size:.85rem}
+form{display:flex;gap:8px;margin:12px 0} input{flex:1;min-width:0;padding:10px;border-radius:8px;border:1px solid #3b5278;background:#16263f;color:#fff;font:inherit}
+button.go{padding:10px 16px;border:0;border-radius:8px;background:#2f7de1;color:#fff;cursor:pointer;font:inherit}
+#out{background:#16263f;border-radius:10px;padding:14px;min-height:80px;white-space:pre-wrap;line-height:1.5}
+.src{margin-top:10px;font-size:.85rem;color:#9fc2ff}
+.foot{font-size:.8rem;opacity:.7;margin-top:14px}
+</style></head><body>
+<h1>MV Horizon Star - Safety Manual Assistant</h1>
+<p class="note">DEMO: dummy manual (10 pages). Maris answers only from the manual and cites the page. Built with AWS Lambda + Gemini (RAG). Not for real operations.</p>
+<div class="wrap">
+  <div class="maris">
+    <video id="maris" src="maris/neutral-idle.mp4" poster="maris/poster.jpg" muted playsinline autoplay loop preload="auto" aria-label="Maris, the AI assistant"></video>
+    <span class="tag" id="mood">Maris · ready</span>
+    <button type="button" class="snd" id="snd" aria-pressed="true">Sound: on</button>
+  </div>
+  <div>
+    <div class="chips" id="chips"></div>
+    <form id="f"><input id="q" maxlength="300" placeholder="Ask Maris about the safety manual..." required aria-label="Your question"><button class="go">Ask</button></form>
+    <div id="out" aria-live="polite">Hi, I'm Maris. Ask me anything about the MV Horizon Star safety manual.</div>
+  </div>
+</div>
+<p class="foot">Follow the official procedure and the Master's instructions. This page uses a fictional vessel and manual.</p>
+<script>
+const API_URL="YOUR_FUNCTION_URL";
+const samples=["What is an EPIRB?","Bakit bawal ang metal na kutsara sa microwave sa galley?","What to do if a fire starts inside a microwave?","Who implements the Ship Security Plan?","Paano magluto ng adobo?"];
+const SAFETY=/fire|sunog|smoke|enclosed|rescue|overboard|abandon|emergency|alarm|oil spill|security|threat/i;
+const v=document.getElementById("maris"),tag=document.getElementById("mood"),chips=document.getElementById("chips"),out=document.getElementById("out"),q=document.getElementById("q");
+let sound=true,audio=null;
+const snd=document.getElementById("snd");
+snd.onclick=()=>{sound=!sound;snd.textContent="Sound: "+(sound?"on":"off");snd.setAttribute("aria-pressed",sound);if(!sound&&audio){audio.pause();play("neutral-idle","ready",true)}};
+function say(b64,name,label){if(audio){audio.pause();audio=null}
+  if(!b64||!sound){play(name,label,false);return}
+  play(name,label,true);audio=new Audio("data:audio/mpeg;base64,"+b64);
+  audio.onended=()=>{audio=null;play("neutral-idle","ready",true)};
+  const p=audio.play();if(p)p.catch(()=>{play(name,label,false)});}
+function play(name,label,loop){v.loop=!!loop;v.src="maris/"+name+".mp4";tag.textContent="Maris · "+label;const p=v.play();if(p)p.catch(()=>{});}
+v.addEventListener("ended",()=>{if(!audio)play("neutral-idle","ready",true)});
+samples.forEach(s=>{const b=document.createElement("button");b.type="button";b.textContent=s;b.onclick=()=>{q.value=s;ask(s)};chips.appendChild(b)});
+document.getElementById("f").onsubmit=e=>{e.preventDefault();ask(q.value)};
+async function ask(text){
+  if(audio){audio.pause();audio=null}
+  out.textContent="Maris is checking the manual...";
+  play("thinking","thinking",true);
+  try{
+    const r=await fetch(API_URL,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({question:text})});
+    const d=await r.json();
+    out.textContent=(d.answer||d.error||"No answer.").replace(/[*_#`]+/g,"");
+    if(d.error){say(null,"apologetic","sorry");return}
+    if(!d.found){say(d.audio,"apologetic","not in the manual");return}
+    if(SAFETY.test(text)||SAFETY.test(d.answer||"")) say(d.audio,"serious","safety");
+    else say(d.audio,Math.random()<.5?"smile":"confident","answer");
+    const cited=[...(d.answer||"").matchAll(/Page\s*(\d+)/gi)].map(m=>+m[1]);
+    let src=(d.sources||[]).filter(x=>cited.includes(x.page));
+    if(!src.length&&d.sources&&d.sources.length) src=[d.sources[0]];
+    if(src.length){const s=document.createElement("div");s.className="src";
+      s.textContent="Source: "+src.map(x=>"Page "+x.page+" ("+x.section+")").join(" | ");out.appendChild(s)}
+  }catch(err){out.textContent="Cannot reach the server. Please try again later.";play("apologetic","offline",false)}
+}
+</script></body></html>
