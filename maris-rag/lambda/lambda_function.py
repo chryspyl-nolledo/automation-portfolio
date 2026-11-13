@@ -6,6 +6,7 @@ GEN_MODEL = os.environ.get("GEN_MODEL", "gemini-3.5-flash-lite")
 DIM = 768
 TOP_K = 3
 MAX_Q = 300
+MAX_SPEAK = 900
 BASE = "https://generativelanguage.googleapis.com/v1beta/models/"
 
 _key = None
@@ -42,12 +43,18 @@ def embed(texts, task):
 
 FILES = {"manual": "manual.json", "about": "about.json"}
 
+def doc_text(p):
+    return "%s (Page %d)\n%s" % (p["section"], p["page"], p["text"])
+
 def load_index(mode):
     if mode not in _index:
         with open(os.path.join(os.path.dirname(__file__), FILES[mode])) as f:
             pages = json.load(f)["pages"]
-        texts = ["%s (Page %d)\n%s" % (p["section"], p["page"], p["text"]) for p in pages]
-        vecs = embed(texts, "RETRIEVAL_DOCUMENT")
+        if all("vec" in p for p in pages):          # pre-built by build_vectors.py (fast cold start)
+            vecs = [p.pop("vec") for p in pages]
+        else:
+            texts = [doc_text(p) for p in pages]
+            vecs = embed(texts, "RETRIEVAL_DOCUMENT")
         _index[mode] = list(zip(pages, vecs))
     return _index[mode]
 
@@ -83,7 +90,7 @@ LANG = ("Reply in the same language as the question: English question gets an En
 
 PAGE_NAMES = {"ai": "AI Projects", "automation": "Workflow Automation", "business": "Business Apps", "aws": "AWS Projects", "data": "Data & Dashboards"}
 
-def answer(question, mode="manual", page=""):
+def answer(question, mode="manual", page="", voice=True):
     index = load_index(mode)
     q2 = expand(question)
     if mode == "about" and page in PAGE_NAMES:
@@ -118,13 +125,16 @@ def answer(question, mode="manual", page=""):
             msg = "Hindi ko makita ang sagot na iyan sa manual ng MV Horizon Star (demo). Subukan mong itanong sa Chief Officer o sa Master."
         else:
             msg = "I could not find that in the MV Horizon Star safety manual (demo). Please ask the Chief Officer or the Master."
-        return {"answer": msg, "sources": [], "found": False, "audio": speak(msg)}
-    return {"answer": text, "found": True, "audio": speak(text),
+        return {"answer": msg, "sources": [], "found": False, "audio": speak(msg) if voice else None}
+    return {"answer": text, "found": True, "audio": speak(text) if voice else None,
             "sources": [{"page": p["page"], "section": p["section"], "score": round(s, 3)} for s, p in scored]}
 
 def handler(event, context):
     try:
         body = json.loads(event.get("body") or "{}")
+        if body.get("speak"):                       # second call: voice for an answer already shown
+            t = str(body["speak"])[:MAX_SPEAK]
+            return resp(200, {"audio": speak(t)})
         q = str(body.get("question", "")).strip()
         if not q:
             return resp(400, {"error": "Walang tanong."})
@@ -132,7 +142,7 @@ def handler(event, context):
             return resp(400, {"error": "Masyadong mahaba ang tanong (max %d characters)." % MAX_Q})
         mode = "about" if body.get("mode") == "about" else "manual"
         page = str(body.get("page", ""))[:20]
-        return resp(200, answer(q, mode, page))
+        return resp(200, answer(q, mode, page, body.get("voice", True) is not False))
     except Exception as e:
         print("ERROR", e)
         return resp(500, {"error": "May error sa server. Subukan ulit mamaya."})

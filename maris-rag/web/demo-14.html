@@ -37,7 +37,7 @@ const API_URL="YOUR_FUNCTION_URL";
 const samples=["What is an EPIRB?","Bakit bawal ang metal na kutsara sa microwave sa galley?","What to do if a fire starts inside a microwave?","Who implements the Ship Security Plan?","Paano magluto ng adobo?"];
 const SAFETY=/fire|sunog|smoke|enclosed|rescue|overboard|abandon|emergency|alarm|oil spill|security|threat/i;
 const v=document.getElementById("maris"),tag=document.getElementById("mood"),chips=document.getElementById("chips"),out=document.getElementById("out"),q=document.getElementById("q");
-let sound=true,audio=null;
+let sound=true,audio=null,turn=0;
 const snd=document.getElementById("snd");
 snd.onclick=()=>{sound=!sound;snd.textContent="Sound: "+(sound?"on":"off");snd.setAttribute("aria-pressed",sound);if(!sound&&audio){audio.pause();play("neutral-idle","ready",true)}};
 function say(b64,name,label){if(audio){audio.pause();audio=null}
@@ -49,18 +49,24 @@ function play(name,label,loop){v.loop=!!loop;v.src="maris/"+name+".mp4";tag.text
 v.addEventListener("ended",()=>{if(!audio)play("neutral-idle","ready",true)});
 samples.forEach(s=>{const b=document.createElement("button");b.type="button";b.textContent=s;b.onclick=()=>{q.value=s;ask(s)};chips.appendChild(b)});
 document.getElementById("f").onsubmit=e=>{e.preventDefault();ask(q.value)};
+function voiceFor(text,name,label){
+  if(!sound){play(name,label,false);return}
+  play(name,label,true);const mine=++turn;
+  fetch(API_URL,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({speak:text})})
+  .then(r=>r.json()).then(a=>{if(mine===turn)say(a.audio,name,label)}).catch(()=>{if(mine===turn)play("neutral-idle","ready",true)});}
 async function ask(text){
-  if(audio){audio.pause();audio=null}
+  turn++;if(audio){audio.pause();audio=null}
   out.textContent="Maris is checking the manual...";
   play("thinking","thinking",true);
   try{
-    const r=await fetch(API_URL,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({question:text})});
+    const r=await fetch(API_URL,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({question:text,voice:false})});
     const d=await r.json();
-    out.textContent=(d.answer||d.error||"No answer.").replace(/[*_#`]+/g,"");
+    const shown=(d.answer||d.error||"No answer.").replace(/[*_#`]+/g,"");
+    out.textContent=shown;
     if(d.error){say(null,"apologetic","sorry");return}
-    if(!d.found){say(d.audio,"apologetic","not in the manual");return}
-    if(SAFETY.test(text)||SAFETY.test(d.answer||"")) say(d.audio,"serious","safety");
-    else say(d.audio,Math.random()<.5?"smile":"confident","answer");
+    if(!d.found){voiceFor(shown,"apologetic","not in the manual");return}
+    if(SAFETY.test(text)||SAFETY.test(d.answer||"")) voiceFor(shown,"serious","safety");
+    else voiceFor(shown,Math.random()<.5?"smile":"confident","answer");
     const cited=[...(d.answer||"").matchAll(/Page\s*(\d+)/gi)].map(m=>+m[1]);
     let src=(d.sources||[]).filter(x=>cited.includes(x.page));
     if(!src.length&&d.sources&&d.sources.length) src=[d.sources[0]];

@@ -137,13 +137,13 @@
   var btn = $(".cb-btn"), log = $(".cb-log"), chips = $(".cb-chips"), face = $(".cb-face"),
       title = $(".cb-title"), input = $(".cb-form input"), muteBtn = $(".cb-mute"),
       sub = $(".cb-sub"), note = $(".cb-note"), vid = $(".cb-stage video"), greet = $(".cb-greet");
-  var mAudio = null;
+  var mAudio = null, marisTurn = 0;
   function clip(name, loop) {
     vid.loop = !!loop; vid.src = "maris/" + name + ".mp4";
     var p = vid.play(); if (p) p.catch(function () {});
   }
   vid.addEventListener("ended", function () { if (!mAudio) clip("neutral-idle", true); });
-  function stopMaris() { if (mAudio) { mAudio.pause(); mAudio = null; } }
+  function stopMaris() { marisTurn++; if (mAudio) { mAudio.pause(); mAudio = null; } }
   function sayMaris(b64, name) {
     stopMaris();
     if (!b64 || !voice) { clip(name, false); return; }
@@ -194,15 +194,23 @@
     add(text, "me"); input.value = "";
     var bot = current, wait = add("…", "bot", false);
     if (bot === "maris") {
-      clip("thinking", true);
+      stopMaris(); clip("thinking", true);
       fetch(MARIS_URL, { method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ question: text, mode: "about", page: PAGE }) })
+        body: JSON.stringify({ question: text, mode: "about", page: PAGE, voice: false }) })
       .then(function (r) { return r.json(); }).then(function (d) {
         wait.remove();
         var reply = (d.answer || d.error || "Sorry, something went wrong.").replace(/[*_#`]+/g, "");
         if (bot === current) {
           add(reply, "bot");
-          sayMaris(d.error ? null : d.audio, d.error || !d.found ? "apologetic" : (Math.random() < .5 ? "smile" : "confident"));
+          var mood = d.error || !d.found ? "apologetic" : (Math.random() < .5 ? "smile" : "confident");
+          if (d.error || !voice) { sayMaris(null, mood); return; }
+          clip(mood, true);                       // text first, voice follows
+          var mine = ++marisTurn;
+          fetch(MARIS_URL, { method: "POST", headers: { "content-type": "application/json" },
+            body: JSON.stringify({ speak: reply }) })
+          .then(function (r) { return r.json(); })
+          .then(function (a) { if (mine === marisTurn && current === "maris") sayMaris(a.audio, mood); })
+          .catch(function () { if (mine === marisTurn) clip("neutral-idle", true); });
         } else state[bot].history.push([reply, "bot"]);
       }).catch(function () {
         wait.remove(); add("Sorry, Maris is not reachable right now. Please try again later.", "bot");

@@ -32,6 +32,12 @@ Question (EN / Taglish)
 - The page picks her expression automatically: *thinking* while searching, *serious* for safety topics (fire, enclosed space, abandon ship ...), *smile/confident* for a found answer, *apologetic* when the answer is not in the manual.
 - Not yet: lip-sync (mouth matching the words) is planned for a later version.
 
+## Speed
+
+- **Text first, voice second:** the page asks for the answer with `voice: false`, shows it at once, then sends `{"speak": answer}` for the Polly audio.
+- **Pre-built vectors:** `build_vectors.py` adds the embeddings to `manual.json` and `about.json` before zipping, so a cold start does not re-embed every page.
+- **Lambda memory 1024 MB** for a faster CPU.
+
 ## Folder
 
 | Path | What it is |
@@ -42,6 +48,7 @@ Question (EN / Taglish)
 | `web/demo-14.html` | Manual assistant page with Maris video and sound on/off |
 | `web/chatbot.js` | Site chat widget: Maris tab, greeting pop-up, page-aware questions |
 | `web/maris/` | Maris expression clips and poster image |
+| `lambda/build_vectors.py` | Run before zipping: adds pre-computed embeddings to the JSON files |
 | `setup.sh` | One-time setup in AWS CloudShell |
 
 ## Safety and cost guards
