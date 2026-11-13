@@ -1,6 +1,6 @@
 # n8n Automation Portfolio
 
-Workflow automations built with **n8n** by Chryspyl Nolledo — a Master Mariner moving into remote, written-communication work (operations, documentation, automation).
+Workflow automations built with **n8n** (plus an AWS + Gemini RAG assistant) by Chryspyl Nolledo — a Master Mariner moving into remote, written-communication work (operations, documentation, automation).
 
 > **All data is dummy/demo data.** Company, vessel, customer and product names are fictional. Credentials, chat IDs, Sheet IDs and e-mail addresses have been removed — import a workflow, connect your own credentials, and replace the `YOUR_...` placeholders.
 
@@ -12,12 +12,14 @@ Workflow automations built with **n8n** by Chryspyl Nolledo — a Master Mariner
 | [`sunguard/`](sunguard) | **SunGuard Solar & CCTV (demo)** e-commerce chain: order form → Sheet → AI sales agent → Shopify → Sheet → **Odoo** | n8n, Google Sheets, Apps Script, Shopify, Gemini, Odoo, Telegram |
 | [`sealink/`](sealink) | **SeaLink Ship Spares (demo)**: Odoo inventory → daily logistics brief on Telegram | n8n, Odoo 18, Telegram |
 | [`maritime-incident/`](maritime-incident) | **Maritime incident intake (demo)**: public website → AWS Lambda/S3 → n8n → Gemini Vision draft → incident sheet, officer review, ClickUp CAPA | n8n, AWS Lambda, S3, CloudFront, Gemini, Google Sheets, Gmail, ClickUp |
+| [`maris-rag/`](maris-rag) | **Vessel Safety Manual Assistant with Maris (demo)**: RAG over a dummy 10-page safety manual, answers in English or Taglish with the page cited, spoken by the Maris avatar; same Maris answers portfolio questions site-wide | AWS Lambda, Secrets Manager, Polly, S3, CloudFront, Gemini |
 
 ## Highlights
 
 - **Shopify → n8n → Odoo (11C):** a Shopify order becomes a confirmed Odoo sales order in the SunGuard company, stock reserved/deducted in Odoo. Duplicate-safe (`SHOPIFY-<order no>` reference).
 - **Odoo → n8n → Telegram (12):** every morning, a brief of delivery shortages, upcoming deliveries/receipts and low-stock spare parts.
 - **AWS + n8n incident intake (13C):** a website request goes through Lambda and private S3 to n8n and Gemini Vision; capped at 8 AI calls a day, retry-safe, and tested end to end through officer approval, ClickUp CAPA and closure.
+- **RAG assistant with Maris (14):** Gemini embeddings find the right manual page, Gemini answers only from it and cites the page, Polly gives Maris a voice; says "not in the manual" instead of guessing.
 - **AI sales agent (10C):** Gemini-powered chat agent that answers from live inventory.
 - **Safe-by-default:** workflows are exported inactive, with placeholder credentials; the Odoo workflows use a Config node for URL/DB/API key.
 
