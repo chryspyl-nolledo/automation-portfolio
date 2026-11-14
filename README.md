@@ -13,6 +13,7 @@ Workflow automations built with **n8n** (plus an AWS + Gemini RAG assistant) by 
 | [`sealink/`](sealink) | **SeaLink Ship Spares (demo)**: Odoo inventory → daily logistics brief on Telegram | n8n, Odoo 18, Telegram |
 | [`maritime-incident/`](maritime-incident) | **Maritime incident intake (demo)**: public website → AWS Lambda/S3 → n8n → Gemini Vision draft → incident sheet, officer review, ClickUp CAPA | n8n, AWS Lambda, S3, CloudFront, Gemini, Google Sheets, Gmail, ClickUp |
 | [`maris-rag/`](maris-rag) | **Vessel Safety Manual Assistant with Maris (demo)**: RAG over a dummy 10-page safety manual, answers in English or Taglish with the page cited, spoken by the Maris avatar; same Maris answers portfolio questions site-wide | AWS Lambda, Secrets Manager, Polly, S3, CloudFront, Gemini |
+| [`crm-project-a/`](crm-project-a) | **SunGuard Odoo CRM (demo, Phase 1)**: lead sheet → Gemini lead scoring → Odoo CRM lead or duplicate note → Telegram for hot leads → ClickUp site survey → lead moves to Proposition | n8n, Odoo 18 CRM (JSON-RPC), Gemini, Google Sheets, Telegram, ClickUp |
 
 ## Highlights
 

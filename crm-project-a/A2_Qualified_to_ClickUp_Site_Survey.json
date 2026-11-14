@@ -1,0 +1,560 @@
+{
+  "name": "A2 Qualified → ClickUp site survey",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "0000a000-0000-0000-0000-00000000001a",
+      "name": "Every 15 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "0000a000-0000-0000-0000-00000000001b",
+      "name": "Manual test",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/jsonrpc",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $env.ODOO_DB, Number($env.ODOO_UID), $env.ODOO_API_KEY, 'ir.config_parameter', 'get_param', ['sunguard_crm.ids'], {} ] } } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "0000a000-0000-0000-0000-00000000001c",
+      "name": "Odoo: get config",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        100
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfgRes = $('Odoo: get config').first().json;\nif (cfgRes.error || !cfgRes.result) {\n  throw new Error('Odoo config not found. Run odoo_setup_crm.py --apply and check ODOO_* env vars. ' +\n    JSON.stringify(cfgRes.error || '').slice(0, 300));\n}\nconst cfg = JSON.parse(cfgRes.result);\nconst context = { allowed_company_ids: [cfg.company_id] };\nconst errText = (e) => (e && (e.data?.message || e.message)) || JSON.stringify(e || '').slice(0, 200);\n\nreturn [{ json: { rpc: { model: 'crm.lead', method: 'search_read',\n  args: [[['company_id', '=', cfg.company_id], ['stage_id', '=', cfg.stage_ids.Qualified], ['x_clickup_task_id', '=', false]]],\n  kwargs: { fields: [\"id\", \"name\", \"contact_name\", \"email_from\", \"phone\", \"city\", \"description\", \"x_lead_ref\", \"x_clickup_task_id\"], limit: 20, context } } } }];"
+      },
+      "id": "0000a000-0000-0000-0000-00000000001d",
+      "name": "Find Qualified leads without task",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/jsonrpc",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $env.ODOO_DB, Number($env.ODOO_UID), $env.ODOO_API_KEY, $json.rpc.model, $json.rpc.method, $json.rpc.args, $json.rpc.kwargs || {} ] } } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "0000a000-0000-0000-0000-00000000001e",
+      "name": "Odoo: Qualified leads without task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        -100
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// One ClickUp task per Qualified lead that has no task yet. Due in 3 days.\nconst r = $input.first().json;\nif (r.error) throw new Error('Odoo: ' + (r.error.data?.message || r.error.message));\nconst plain = (h) => String(h || '').replace(/<\\/li>/g, '\\n').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&')\n  .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '\"').replace(/&#39;/g, \"'\").trim();\nconst due = new Date(Date.now() + 3 * 86400000).toISOString();\nreturn (r.result || []).map(l => ({ json: { lead: l, due,\n  task_name: `Site survey – ${l.contact_name || l.name} – ${l.city || 'city not set'}`,\n  task_content: [`Odoo lead #${l.id}: ${l.name}`, `Customer: ${l.contact_name || '-'}`, `Phone: ${l.phone || '-'}`,\n    `Email: ${l.email_from || '-'}`, `City: ${l.city || '-'}`, `Sheet Lead ID: ${l.x_lead_ref || '-'}`, '',\n    plain(l.description), '', 'Demo data only (SunGuard Solar & CCTV is fictional).'].join('\\n') } }));"
+      },
+      "id": "0000a000-0000-0000-0000-00000000001f",
+      "name": "Leads needing a task",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "team": "YOUR_CLICKUP_TEAM_ID",
+        "space": "YOUR_CLICKUP_SPACE_ID",
+        "folderless": true,
+        "list": "YOUR_CLICKUP_LIST_ID",
+        "name": "={{ $json.task_name }}",
+        "additionalFields": {
+          "content": "={{ $json.task_content }}",
+          "dueDate": "={{ $json.due }}"
+        }
+      },
+      "id": "0000a000-0000-0000-0000-000000000020",
+      "name": "ClickUp: create site survey task",
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        -100
+      ],
+      "credentials": {
+        "clickUpApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR clickUpApi credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfgRes = $('Odoo: get config').first().json;\nif (cfgRes.error || !cfgRes.result) {\n  throw new Error('Odoo config not found. Run odoo_setup_crm.py --apply and check ODOO_* env vars. ' +\n    JSON.stringify(cfgRes.error || '').slice(0, 300));\n}\nconst cfg = JSON.parse(cfgRes.result);\nconst context = { allowed_company_ids: [cfg.company_id] };\nconst errText = (e) => (e && (e.data?.message || e.message)) || JSON.stringify(e || '').slice(0, 200);\n\n// Save the ClickUp task ID on the lead so the task is never created twice.\nconst leads = $('Leads needing a task').all();\nreturn $input.all().map((it, i) => ({ json: { lead: leads[i].json.lead, task_id: String(it.json.id), due: leads[i].json.due,\n  rpc: { model: 'crm.lead', method: 'write', args: [[leads[i].json.lead.id], { x_clickup_task_id: String(it.json.id) }],\n         kwargs: { context } } } }));"
+      },
+      "id": "0000a000-0000-0000-0000-000000000021",
+      "name": "Save task ID on lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/jsonrpc",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $env.ODOO_DB, Number($env.ODOO_UID), $env.ODOO_API_KEY, $json.rpc.model, $json.rpc.method, $json.rpc.args, $json.rpc.kwargs || {} ] } } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "0000a000-0000-0000-0000-000000000022",
+      "name": "Odoo: save task ID",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        -100
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfgRes = $('Odoo: get config').first().json;\nif (cfgRes.error || !cfgRes.result) {\n  throw new Error('Odoo config not found. Run odoo_setup_crm.py --apply and check ODOO_* env vars. ' +\n    JSON.stringify(cfgRes.error || '').slice(0, 300));\n}\nconst cfg = JSON.parse(cfgRes.result);\nconst context = { allowed_company_ids: [cfg.company_id] };\nconst errText = (e) => (e && (e.data?.message || e.message)) || JSON.stringify(e || '').slice(0, 200);\n\nconst src = $('Save task ID on lead').all();\nreturn $input.all().map((it, i) => {\n  const d = src[i].json;\n  if (it.json.error) throw new Error('Odoo write failed: ' + errText(it.json.error));\n  return { json: { rpc: { model: 'crm.lead', method: 'message_post', args: [[d.lead.id]],\n    kwargs: { body: `ClickUp site survey task ${d.task_id} created, due ${d.due.slice(0, 10)}.`,\n              message_type: 'comment', subtype_xmlid: 'mail.mt_note', context } } } };\n});"
+      },
+      "id": "0000a000-0000-0000-0000-000000000023",
+      "name": "Note: task created",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/jsonrpc",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $env.ODOO_DB, Number($env.ODOO_UID), $env.ODOO_API_KEY, $json.rpc.model, $json.rpc.method, $json.rpc.args, $json.rpc.kwargs || {} ] } } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "0000a000-0000-0000-0000-000000000024",
+      "name": "Odoo: add note (task created)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        -100
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfgRes = $('Odoo: get config').first().json;\nif (cfgRes.error || !cfgRes.result) {\n  throw new Error('Odoo config not found. Run odoo_setup_crm.py --apply and check ODOO_* env vars. ' +\n    JSON.stringify(cfgRes.error || '').slice(0, 300));\n}\nconst cfg = JSON.parse(cfgRes.result);\nconst context = { allowed_company_ids: [cfg.company_id] };\nconst errText = (e) => (e && (e.data?.message || e.message)) || JSON.stringify(e || '').slice(0, 200);\n\nreturn [{ json: { rpc: { model: 'crm.lead', method: 'search_read',\n  args: [[['company_id', '=', cfg.company_id], ['stage_id', '=', cfg.stage_ids.Qualified], ['x_clickup_task_id', '!=', false]]],\n  kwargs: { fields: [\"id\", \"name\", \"contact_name\", \"email_from\", \"phone\", \"city\", \"description\", \"x_lead_ref\", \"x_clickup_task_id\"], limit: 50, context } } } }];"
+      },
+      "id": "0000a000-0000-0000-0000-000000000025",
+      "name": "Find Qualified leads with task",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/jsonrpc",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $env.ODOO_DB, Number($env.ODOO_UID), $env.ODOO_API_KEY, $json.rpc.model, $json.rpc.method, $json.rpc.args, $json.rpc.kwargs || {} ] } } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "0000a000-0000-0000-0000-000000000026",
+      "name": "Odoo: Qualified leads with task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        660,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nif (r.error) throw new Error('Odoo: ' + (r.error.data?.message || r.error.message));\nreturn (r.result || []).map(l => ({ json: { lead: l, task_id: l.x_clickup_task_id } }));"
+      },
+      "id": "0000a000-0000-0000-0000-000000000027",
+      "name": "Leads with a task",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "id": "={{ $json.task_id }}"
+      },
+      "id": "0000a000-0000-0000-0000-000000000028",
+      "name": "ClickUp: get task",
+      "type": "n8n-nodes-base.clickUp",
+      "typeVersion": 1,
+      "position": [
+        1100,
+        300
+      ],
+      "credentials": {
+        "clickUpApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR clickUpApi credential"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfgRes = $('Odoo: get config').first().json;\nif (cfgRes.error || !cfgRes.result) {\n  throw new Error('Odoo config not found. Run odoo_setup_crm.py --apply and check ODOO_* env vars. ' +\n    JSON.stringify(cfgRes.error || '').slice(0, 300));\n}\nconst cfg = JSON.parse(cfgRes.result);\nconst context = { allowed_company_ids: [cfg.company_id] };\nconst errText = (e) => (e && (e.data?.message || e.message)) || JSON.stringify(e || '').slice(0, 200);\n\n// Only tasks marked Complete/Closed in ClickUp move the lead to Proposition.\nconst src = $('Leads with a task').all();\nconst out = [];\n$input.all().forEach((it, i) => {\n  const type = String(it.json.status?.type || '').toLowerCase();\n  if (!['done', 'closed'].includes(type)) return;\n  const lead = src[i].json.lead;\n  out.push({ json: { lead, task_id: src[i].json.task_id,\n    rpc: { model: 'crm.lead', method: 'write', args: [[lead.id], { stage_id: cfg.stage_ids.Proposition }], kwargs: { context } } } });\n});\nreturn out;"
+      },
+      "id": "0000a000-0000-0000-0000-000000000029",
+      "name": "Only completed tasks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/jsonrpc",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $env.ODOO_DB, Number($env.ODOO_UID), $env.ODOO_API_KEY, $json.rpc.model, $json.rpc.method, $json.rpc.args, $json.rpc.kwargs || {} ] } } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "0000a000-0000-0000-0000-00000000002a",
+      "name": "Odoo: move to Proposition",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfgRes = $('Odoo: get config').first().json;\nif (cfgRes.error || !cfgRes.result) {\n  throw new Error('Odoo config not found. Run odoo_setup_crm.py --apply and check ODOO_* env vars. ' +\n    JSON.stringify(cfgRes.error || '').slice(0, 300));\n}\nconst cfg = JSON.parse(cfgRes.result);\nconst context = { allowed_company_ids: [cfg.company_id] };\nconst errText = (e) => (e && (e.data?.message || e.message)) || JSON.stringify(e || '').slice(0, 200);\n\nconst src = $('Only completed tasks').all();\nconst today = new Date().toISOString().slice(0, 10);\nreturn $input.all().map((it, i) => {\n  const d = src[i].json;\n  if (it.json.error) throw new Error('Odoo stage change failed: ' + errText(it.json.error));\n  return { json: { rpc: { model: 'crm.lead', method: 'message_post', args: [[d.lead.id]],\n    kwargs: { body: `Site survey done ${today} (ClickUp task ${d.task_id}). Moved to Proposition.`,\n              message_type: 'comment', subtype_xmlid: 'mail.mt_note', context } } } };\n});"
+      },
+      "id": "0000a000-0000-0000-0000-00000000002b",
+      "name": "Note: survey done",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/jsonrpc",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $env.ODOO_DB, Number($env.ODOO_UID), $env.ODOO_API_KEY, $json.rpc.model, $json.rpc.method, $json.rpc.args, $json.rpc.kwargs || {} ] } } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "0000a000-0000-0000-0000-00000000002c",
+      "name": "Odoo: add note (survey done)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1980,
+        300
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "## A2 Qualified → ClickUp site survey\nEvery 15 min, two checks:\n**Top:** SunGuard leads in stage **Qualified** without a ClickUp task → create task \"Site survey – name – city\" (due in 3 days) → save task ID on the lead (x_clickup_task_id) + note.\n**Bottom:** Qualified leads with a task → if the ClickUp task is **Complete** → move lead to **Proposition** + note \"Site survey done <date>\".\n\nSet the ClickUp node to list **SunGuard Site Surveys** (create it once in ClickUp).",
+        "width": 620,
+        "height": 300,
+        "color": 5
+      },
+      "id": "0000a000-0000-0000-0000-00000000002d",
+      "name": "README",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -520
+      ]
+    }
+  ],
+  "connections": {
+    "Every 15 minutes": {
+      "main": [
+        [
+          {
+            "node": "Odoo: get config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual test": {
+      "main": [
+        [
+          {
+            "node": "Odoo: get config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: get config": {
+      "main": [
+        [
+          {
+            "node": "Find Qualified leads without task",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Find Qualified leads with task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Qualified leads without task": {
+      "main": [
+        [
+          {
+            "node": "Odoo: Qualified leads without task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: Qualified leads without task": {
+      "main": [
+        [
+          {
+            "node": "Leads needing a task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leads needing a task": {
+      "main": [
+        [
+          {
+            "node": "ClickUp: create site survey task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ClickUp: create site survey task": {
+      "main": [
+        [
+          {
+            "node": "Save task ID on lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save task ID on lead": {
+      "main": [
+        [
+          {
+            "node": "Odoo: save task ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: save task ID": {
+      "main": [
+        [
+          {
+            "node": "Note: task created",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Note: task created": {
+      "main": [
+        [
+          {
+            "node": "Odoo: add note (task created)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Qualified leads with task": {
+      "main": [
+        [
+          {
+            "node": "Odoo: Qualified leads with task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: Qualified leads with task": {
+      "main": [
+        [
+          {
+            "node": "Leads with a task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leads with a task": {
+      "main": [
+        [
+          {
+            "node": "ClickUp: get task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ClickUp: get task": {
+      "main": [
+        [
+          {
+            "node": "Only completed tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Only completed tasks": {
+      "main": [
+        [
+          {
+            "node": "Odoo: move to Proposition",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: move to Proposition": {
+      "main": [
+        [
+          {
+            "node": "Note: survey done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Note: survey done": {
+      "main": [
+        [
+          {
+            "node": "Odoo: add note (survey done)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {
+    "Manual test": [
+      {
+        "json": {}
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}

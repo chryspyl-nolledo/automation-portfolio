@@ -1,0 +1,677 @@
+{
+  "name": "A1 Lead Intake + AI Qualifier",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 5
+            }
+          ]
+        }
+      },
+      "id": "0000a000-0000-0000-0000-000000000006",
+      "name": "Every 5 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "0000a000-0000-0000-0000-000000000007",
+      "name": "Manual test",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/jsonrpc",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $env.ODOO_DB, Number($env.ODOO_UID), $env.ODOO_API_KEY, 'ir.config_parameter', 'get_param', ['sunguard_crm.ids'], {} ] } } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "0000a000-0000-0000-0000-000000000008",
+      "name": "Odoo: get config",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        100
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SUNGUARD_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "CRM_Leads",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status",
+              "lookupValue": "Waiting"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0000a000-0000-0000-0000-000000000009",
+      "name": "Read waiting leads",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        440,
+        100
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR googleSheetsOAuth2Api credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Up to MAX waiting leads per run. If the same email appears twice in one run, only the first\n// goes now; the other stays Waiting and is merged into the Odoo lead on the next run.\nconst MAX = 10;\nconst PROMPT = \"You are a lead qualifier for SunGuard Solar & CCTV, a small solar and CCTV shop in the Philippines (demo business).\\nRead the customer message and return ONLY valid JSON, no extra text:\\n{\\n  \\\"spam\\\": true|false,\\n  \\\"score\\\": \\\"Hot\\\"|\\\"Warm\\\"|\\\"Cold\\\",\\n  \\\"products\\\": [\\\"Solar Panel\\\"|\\\"Inverter\\\"|\\\"Battery\\\"|\\\"Hybrid System\\\"|\\\"CCTV\\\"],\\n  \\\"system_size_kw\\\": number|null,\\n  \\\"monthly_bill_php\\\": number|null,\\n  \\\"city\\\": string|null,\\n  \\\"timeline\\\": string|null,\\n  \\\"summary\\\": \\\"one short English sentence\\\"\\n}\\nScoring:\\n- Hot: clear product or size AND a timeline within 60 days or asks for a quote/site visit.\\n- Warm: clear interest but no timeline, or only asking price.\\n- Cold: general question, just browsing, or very far timeline.\\n- spam: links, ads, nonsense, or unrelated selling.\\nRules: The message may be English, Tagalog or Taglish. Do not invent numbers; use null if not stated. Never promise prices or discounts.\\nCustomer message:\\n\\\"\\\"\\\"{{message}}\\\"\\\"\\\"\";\nconst seen = new Set();\nconst out = [];\nfor (const it of $input.all()) {\n  const r = it.json;\n  const leadId = String(r.Lead_ID || '').trim();\n  if (!leadId || String(r.Status || '').trim() !== 'Waiting') continue;\n  if (out.length >= MAX) break;\n  const lead = { Lead_ID: leadId, Name: String(r.Name || '').trim(), Email: String(r.Email || '').trim().toLowerCase(),\n                 Phone: String(r.Phone || '').trim(), City: String(r.City || '').trim(),\n                 Message: String(r.Message || '').trim().slice(0, 2000) };\n  if (String(r.Consent || '').trim().toLowerCase() !== 'yes') {\n    out.push({ json: { route: 'error', lead, error: 'no consent' } });\n    continue;\n  }\n  if (lead.Email && seen.has(lead.Email)) continue;\n  if (lead.Email) seen.add(lead.Email);\n  const safeMsg = lead.Message.replace(/\"{3}/g, '\"');\n  const text = PROMPT.replace('{{message}}', () => safeMsg);\n  out.push({ json: { route: 'ai', lead,\n    geminiRequest: { contents: [{ parts: [{ text }] }],\n                     generationConfig: { responseMimeType: 'application/json', temperature: 0.1 } } } });\n}\nreturn out;"
+      },
+      "id": "0000a000-0000-0000-0000-00000000000a",
+      "name": "Prepare AI requests (max 10)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "0000a000-0000-0000-0000-00000000000b",
+              "leftValue": "={{ $json.route }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "ai"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0000a000-0000-0000-0000-00000000000c",
+      "name": "Consent = Yes?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        880,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googlePalmApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.geminiRequest }}",
+        "options": {
+          "timeout": 120000,
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 4000
+            }
+          }
+        }
+      },
+      "id": "0000a000-0000-0000-0000-000000000005",
+      "name": "Gemini Qualifier",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        0
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR googlePalmApi credential"
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfgRes = $('Odoo: get config').first().json;\nif (cfgRes.error || !cfgRes.result) {\n  throw new Error('Odoo config not found. Run odoo_setup_crm.py --apply and check ODOO_* env vars. ' +\n    JSON.stringify(cfgRes.error || '').slice(0, 300));\n}\nconst cfg = JSON.parse(cfgRes.result);\nconst context = { allowed_company_ids: [cfg.company_id] };\nconst errText = (e) => (e && (e.data?.message || e.message)) || JSON.stringify(e || '').slice(0, 200);\n\n// One output item per lead. Gemini HTTP error (503/429): skipped, stays Waiting, retried next run.\nconst ALLOWED = ['Solar Panel', 'Inverter', 'Battery', 'Hybrid System', 'CCTV'];\nconst src = $('Consent = Yes?').all(0);\nconst res = $input.all();\nconst num = (v) => (typeof v === 'number' && isFinite(v) ? v : null);\nconst out = [];\nfor (let i = 0; i < res.length; i++) {\n  const lead = src[i]?.json?.lead;\n  if (!lead) continue;\n  const r = res[i].json || {};\n  if (r.error) continue;\n  const text = (r.candidates || []).flatMap(c => (c.content?.parts || []).map(p => p.text || '')).join('').trim();\n  let ai;\n  try { ai = JSON.parse(text.replace(/^```(?:json)?\\s*/i, '').replace(/\\s*```$/, '')); }\n  catch (e) { out.push({ json: { route: 'error', lead, error: 'AI returned invalid JSON' } }); continue; }\n  if (ai.spam === true) { out.push({ json: { route: 'spam', lead, ai: { score: '' }, error: 'spam' } }); continue; }\n  if (!['Hot', 'Warm', 'Cold'].includes(ai.score)) { out.push({ json: { route: 'error', lead, error: 'AI score missing' } }); continue; }\n  ai.products = (Array.isArray(ai.products) ? ai.products : []).filter(p => ALLOWED.includes(p));\n  ai.system_size_kw = num(ai.system_size_kw);\n  ai.monthly_bill_php = num(ai.monthly_bill_php);\n  ai.summary = String(ai.summary || '').slice(0, 300);\n  ai.timeline = ai.timeline ? String(ai.timeline).slice(0, 100) : null;\n  ai.city = ai.city ? String(ai.city).slice(0, 80) : null;\n  const domain = lead.Email ? [['email_from', '=ilike', lead.Email], ['company_id', '=', cfg.company_id]] : [['id', '=', 0]];\n  out.push({ json: { route: 'ok', lead, ai,\n    rpc: { model: 'crm.lead', method: 'search_read', args: [domain],\n           kwargs: { fields: ['id', 'name'], limit: 1, context } } } });\n}\nreturn out;"
+      },
+      "id": "0000a000-0000-0000-0000-00000000000d",
+      "name": "Parse AI result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "0000a000-0000-0000-0000-00000000000e",
+              "leftValue": "={{ $json.route }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "rightValue": "ok"
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0000a000-0000-0000-0000-00000000000f",
+      "name": "Valid lead?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1540,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/jsonrpc",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $env.ODOO_DB, Number($env.ODOO_UID), $env.ODOO_API_KEY, $json.rpc.model, $json.rpc.method, $json.rpc.args, $json.rpc.kwargs || {} ] } } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "0000a000-0000-0000-0000-000000000010",
+      "name": "Odoo: find lead by email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        -100
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfgRes = $('Odoo: get config').first().json;\nif (cfgRes.error || !cfgRes.result) {\n  throw new Error('Odoo config not found. Run odoo_setup_crm.py --apply and check ODOO_* env vars. ' +\n    JSON.stringify(cfgRes.error || '').slice(0, 300));\n}\nconst cfg = JSON.parse(cfgRes.result);\nconst context = { allowed_company_ids: [cfg.company_id] };\nconst errText = (e) => (e && (e.data?.message || e.message)) || JSON.stringify(e || '').slice(0, 200);\n\n// Existing lead with the same email -> add a note (no second lead). Otherwise create a new lead.\nconst src = $('Valid lead?').all(0);\nconst res = $input.all();\nconst esc = (s) => String(s ?? '').replace(/[&<>\"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[c]));\nconst noop = { model: 'res.users', method: 'search', args: [[['id', '=', 0]]], kwargs: {} };\nconst out = [];\nfor (let i = 0; i < res.length; i++) {\n  const d = src[i].json, r = res[i].json || {};\n  const L = d.lead, ai = d.ai;\n  if (r.error) { out.push({ json: { ...d, action: 'error', error: 'Odoo search: ' + errText(r.error), rpc: noop } }); continue; }\n  const found = (r.result || [])[0];\n  const products = ai.products.length ? ai.products.join(' + ') : 'Inquiry';\n  const size = ai.system_size_kw ? ` ${ai.system_size_kw}kW` : '';\n  const city = ai.city || L.City || 'Unknown city';\n  const lines = [\n    ['Summary (AI)', ai.summary], ['Products', ai.products.join(', ') || '-'],\n    ['System size', ai.system_size_kw ? ai.system_size_kw + ' kW' : '-'],\n    ['Monthly bill', ai.monthly_bill_php ? 'PHP ' + ai.monthly_bill_php : '-'],\n    ['Timeline', ai.timeline || '-'], ['Score (AI)', ai.score], ['Sheet Lead ID', L.Lead_ID],\n    ['Customer message', L.Message]];\n  const summary = { products, size, city };\n  if (found) {\n    const body = `New website inquiry ${L.Lead_ID} (AI score ${ai.score}). ` +\n      lines.map(([k, v]) => `${k}: ${v}`).join(' | ');\n    out.push({ json: { ...d, ...summary, action: 'note', odoo_id: found.id,\n      rpc: { model: 'crm.lead', method: 'message_post', args: [[found.id]],\n             kwargs: { body, message_type: 'comment', subtype_xmlid: 'mail.mt_note', context } } } });\n  } else {\n    const tags = [ai.score, ...ai.products].map(t => cfg.tag_ids[t]).filter(Boolean);\n    const vals = {\n      name: `${products}${size} – ${city}`, type: 'opportunity',\n      contact_name: L.Name, email_from: L.Email, phone: L.Phone, city,\n      description: '<ul>' + lines.map(([k, v]) => `<li><b>${esc(k)}:</b> ${esc(v)}</li>`).join('') + '</ul>',\n      tag_ids: [[6, 0, tags]], priority: { Hot: '3', Warm: '2', Cold: '1' }[ai.score],\n      stage_id: cfg.stage_ids.New, team_id: cfg.team_id, company_id: cfg.company_id,\n      source_id: cfg.source_id, medium_id: cfg.medium_id, x_lead_ref: L.Lead_ID };\n    out.push({ json: { ...d, ...summary, action: 'create',\n      rpc: { model: 'crm.lead', method: 'create', args: [vals], kwargs: { context } } } });\n  }\n}\nreturn out;"
+      },
+      "id": "0000a000-0000-0000-0000-000000000011",
+      "name": "Decide: create or add note",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/jsonrpc",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $env.ODOO_DB, Number($env.ODOO_UID), $env.ODOO_API_KEY, $json.rpc.model, $json.rpc.method, $json.rpc.args, $json.rpc.kwargs || {} ] } } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "0000a000-0000-0000-0000-000000000012",
+      "name": "Odoo: create lead / add note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        -100
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sheet update + Telegram text (Hot and Warm only).\nconst src = $('Decide: create or add note').all();\nconst res = $input.all();\nconst errText = (e) => (e && (e.data?.message || e.message)) || JSON.stringify(e || '').slice(0, 200);\nconst now = new Date().toISOString();\nconst out = [];\nfor (let i = 0; i < res.length; i++) {\n  const d = src[i].json, r = res[i].json || {};\n  const row = { Lead_ID: d.lead.Lead_ID, Score: d.ai?.score || '', Processed_At: now };\n  if (d.action === 'error' || r.error) {\n    out.push({ json: { ...row, Status: 'Error', Odoo_Lead_ID: '', Error: d.error || 'Odoo: ' + errText(r.error), _alert: '' } });\n    continue;\n  }\n  const odooId = d.action === 'create' ? r.result : d.odoo_id;\n  let alert = '';\n  if (['Hot', 'Warm'].includes(d.ai.score)) {\n    const icon = d.ai.score === 'Hot' ? '🔥' : '🌤️';\n    const when = d.ai.timeline ? `, ${d.ai.timeline}` : '';\n    alert = d.action === 'create'\n      ? `${icon} New ${d.ai.score.toUpperCase()} lead ${d.lead.Lead_ID} — ${d.products}${d.size}, ${d.city}${when}. Odoo #${odooId}`\n      : `${icon} ${d.ai.score.toUpperCase()} follow-up ${d.lead.Lead_ID} — same customer as Odoo #${odooId}, note added.`;\n  }\n  out.push({ json: { ...row, Status: 'Processed', Odoo_Lead_ID: odooId, Error: '', _alert: alert } });\n}\nreturn out;"
+      },
+      "id": "0000a000-0000-0000-0000-000000000013",
+      "name": "Sheet row: processed",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        -100
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Spam, no consent or invalid AI answer: mark the row Error so it is not processed again.\nconst now = new Date().toISOString();\nreturn $input.all().map(it => {\n  const d = it.json;\n  return { json: { Lead_ID: d.lead?.Lead_ID, Status: 'Error', Score: d.ai?.score || '', Odoo_Lead_ID: '',\n                   Processed_At: now, Error: d.error || 'error', _alert: '' } };\n});"
+      },
+      "id": "0000a000-0000-0000-0000-000000000014",
+      "name": "Sheet row: spam / error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SUNGUARD_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "CRM_Leads",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Lead_ID": "={{ $json.Lead_ID }}",
+            "Status": "={{ $json.Status }}",
+            "Score": "={{ $json.Score }}",
+            "Odoo_Lead_ID": "={{ $json.Odoo_Lead_ID }}",
+            "Processed_At": "={{ $json.Processed_At }}",
+            "Error": "={{ $json.Error }}"
+          },
+          "matchingColumns": [
+            "Lead_ID"
+          ],
+          "schema": [
+            {
+              "id": "Lead_ID",
+              "displayName": "Lead_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Odoo_Lead_ID",
+              "displayName": "Odoo_Lead_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Processed_At",
+              "displayName": "Processed_At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Error",
+              "displayName": "Error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "0000a000-0000-0000-0000-000000000015",
+      "name": "Update CRM_Leads row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2680,
+        50
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR googleSheetsOAuth2Api credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "0000a000-0000-0000-0000-000000000016",
+              "leftValue": "={{ $json._alert }}",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0000a000-0000-0000-0000-000000000017",
+      "name": "Hot or Warm?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        2680,
+        -250
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $json._alert }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "0000a000-0000-0000-0000-000000000018",
+      "name": "Telegram alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2900,
+        -250
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR telegramApi credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## A1 Lead Intake + AI Qualifier\nEvery 5 min: read **CRM_Leads** rows with Status = Waiting (max 10 per run) → Gemini scores each message → spam/no-consent/invalid = **Error** row → Odoo `crm.lead` in company SunGuard: same email = **note on the existing lead**, else **new lead** (stage New, tags, stars, source Website) → sheet row **Processed** → Telegram for Hot/Warm.\n\nGemini busy (503): the row stays Waiting and is retried next run.\nOdoo access: env vars ODOO_URL, ODOO_DB, ODOO_UID, ODOO_API_KEY (never stored in this workflow). IDs come from Odoo system parameter sunguard_crm.ids (made by odoo_setup_crm.py).\nSettings → Error Workflow → **00 Error alert**.",
+        "width": 620,
+        "height": 330,
+        "color": 5
+      },
+      "id": "0000a000-0000-0000-0000-000000000019",
+      "name": "README",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -560
+      ]
+    }
+  ],
+  "connections": {
+    "Every 5 minutes": {
+      "main": [
+        [
+          {
+            "node": "Odoo: get config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual test": {
+      "main": [
+        [
+          {
+            "node": "Odoo: get config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: get config": {
+      "main": [
+        [
+          {
+            "node": "Read waiting leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read waiting leads": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI requests (max 10)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare AI requests (max 10)": {
+      "main": [
+        [
+          {
+            "node": "Consent = Yes?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consent = Yes?": {
+      "main": [
+        [
+          {
+            "node": "Gemini Qualifier",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sheet row: spam / error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Qualifier": {
+      "main": [
+        [
+          {
+            "node": "Parse AI result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI result": {
+      "main": [
+        [
+          {
+            "node": "Valid lead?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid lead?": {
+      "main": [
+        [
+          {
+            "node": "Odoo: find lead by email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sheet row: spam / error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: find lead by email": {
+      "main": [
+        [
+          {
+            "node": "Decide: create or add note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Decide: create or add note": {
+      "main": [
+        [
+          {
+            "node": "Odoo: create lead / add note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: create lead / add note": {
+      "main": [
+        [
+          {
+            "node": "Sheet row: processed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheet row: processed": {
+      "main": [
+        [
+          {
+            "node": "Update CRM_Leads row",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Hot or Warm?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sheet row: spam / error": {
+      "main": [
+        [
+          {
+            "node": "Update CRM_Leads row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hot or Warm?": {
+      "main": [
+        [
+          {
+            "node": "Telegram alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {
+    "Manual test": [
+      {
+        "json": {}
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": []
+}
