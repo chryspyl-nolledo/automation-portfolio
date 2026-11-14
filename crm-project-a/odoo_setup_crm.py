@@ -51,7 +51,7 @@ def rpc(service, method, *args):
     if res.get("error"):
         err = res["error"].get("data", {}).get("message") or res["error"].get("message")
         raise SystemExit(f"Odoo error: {err}")
-    return res["result"]
+    return res.get("result")  # Odoo omits "result" when a method returns None
 
 
 uid = rpc("common", "login", DB, USER, KEY)
