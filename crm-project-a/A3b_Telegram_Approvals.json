@@ -12,29 +12,28 @@
           ]
         }
       },
-      "id": "0000a300-0000-0000-0000-000000000011",
+      "id": "3600cf46-a7ea-41d4-86a5-7ca0b9c4333e",
       "name": "Every minute",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
       "position": [
-        0,
-        0
+        48,
+        432
       ]
     },
     {
       "parameters": {},
-      "id": "0000a300-0000-0000-0000-000000000012",
+      "id": "154d1972-7b46-4040-9c22-1cba3c2c39a6",
       "name": "Manual test",
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
       "position": [
-        0,
-        200
+        48,
+        624
       ]
     },
     {
       "parameters": {
-        "method": "GET",
         "url": "=https://api.telegram.org/bot{{ $env.TG_APPROVAL_TOKEN }}/getUpdates",
         "sendQuery": true,
         "queryParameters": {
@@ -53,32 +52,31 @@
           "timeout": 20000
         }
       },
-      "id": "0000a300-0000-0000-0000-000000000013",
+      "id": "65fd288a-bf6d-425f-9e66-e8e622bdeee5",
       "name": "Telegram: get button taps",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        220,
-        100
+        272,
+        528
       ],
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "jsCode": "// Read button taps and edit replies from YOUR chat only. Others are ignored.\nconst CHAT_ID = 'YOUR_TELEGRAM_CHAT_ID';\nconst res = $input.first().json;\nif (res.error || res.ok === false) throw new Error('Telegram getUpdates failed: ' + JSON.stringify(res.error || res.description || '').slice(0, 300) +\n  ' (409 = another webhook/trigger uses this bot)');\nconst ups = res.result || [];\nif (!ups.length) return [];\nconst actions = [];\nfor (const u of ups) {\n  const cq = u.callback_query;\n  if (cq && String(cq.from?.id) === CHAT_ID) {\n    const m = String(cq.data || '').match(/^(send|edit):(L-\\d{4,})$/);\n    if (m) actions.push({ type: m[1], lead: m[2], cq_id: cq.id, message_id: cq.message?.message_id });\n    else actions.push({ type: 'ignore', cq_id: cq.id });\n    continue;\n  }\n  const msg = u.message;\n  if (msg && String(msg.chat?.id) === CHAT_ID && msg.reply_to_message) {\n    const m = String(msg.reply_to_message.text || '').match(/EDIT (L-\\d{4,})/);\n    if (m && String(msg.text || '').trim().length > 20) actions.push({ type: 'edit_text', lead: m[1], text: String(msg.text).trim().slice(0, 4000) });\n  }\n}\nreturn [{ json: { actions, ackOffset: Math.max(...ups.map(u => u.update_id)) + 1 } }];"
+        "jsCode": "// Read button taps and edit replies from YOUR chat only. Others are ignored.\nconst CHAT_ID = 'YOUR_TELEGRAM_CHAT_ID';\nconst res = $input.first().json;\nif (res.error || res.ok === false) throw new Error('Telegram getUpdates failed: ' + JSON.stringify(res.error || res.description || '').slice(0, 300) +\n  ' (409 = another webhook/trigger uses this bot)');\nconst ups = res.result || [];\nif (!ups.length) return [];\nconst actions = [];\nfor (const u of ups) {\n  const cq = u.callback_query;\n  if (cq && String(cq.from?.id) === CHAT_ID) {\n    const m = String(cq.data || '').match(/^(send|edit|fsend|fedit):(L-\\d{4,})$/);\n    if (m) actions.push({ type: m[1], lead: m[2], cq_id: cq.id, message_id: cq.message?.message_id });\n    else actions.push({ type: 'ignore', cq_id: cq.id });\n    continue;\n  }\n  const msg = u.message;\n  if (msg && String(msg.chat?.id) === CHAT_ID && msg.reply_to_message) {\n    const replyText = String(msg.reply_to_message.text || '');\n    const mf = replyText.match(/EDIT FOLLOW-UP (L-\\d{4,})/);\n    const mr = replyText.match(/EDIT (L-\\d{4,})/);\n    if (mf && String(msg.text || '').trim().length > 20) {\n      actions.push({ type: 'fedit_text', lead: mf[1], text: String(msg.text).trim().slice(0, 4000) });\n    } else if (mr && String(msg.text || '').trim().length > 20) {\n      actions.push({ type: 'edit_text', lead: mr[1], text: String(msg.text).trim().slice(0, 4000) });\n    }\n  }\n}\nif (!actions.length) return [];\nreturn [{ json: { actions, ackOffset: Math.max(...ups.map(u => u.update_id)) + 1 } }];"
       },
-      "id": "0000a300-0000-0000-0000-000000000014",
+      "id": "89be00a3-8f58-4b2e-8297-2268fe0e3da5",
       "name": "Parse Telegram updates",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        440,
-        100
+        480,
+        528
       ]
     },
     {
       "parameters": {
-        "method": "GET",
         "url": "=https://api.telegram.org/bot{{ $env.TG_APPROVAL_TOKEN }}/getUpdates",
         "sendQuery": true,
         "queryParameters": {
@@ -101,13 +99,13 @@
           "timeout": 20000
         }
       },
-      "id": "0000a300-0000-0000-0000-000000000015",
+      "id": "f021b20f-f07b-49bf-b1d7-99433926be4d",
       "name": "Telegram: confirm read",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        660,
-        100
+        704,
+        528
       ]
     },
     {
@@ -121,13 +119,13 @@
           "timeout": 30000
         }
       },
-      "id": "0000a300-0000-0000-0000-000000000016",
+      "id": "07a12f1c-e2fe-46f7-9c56-897b3f22b5a2",
       "name": "Odoo: get config",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        880,
-        100
+        928,
+        528
       ],
       "onError": "continueRegularOutput"
     },
@@ -136,42 +134,46 @@
         "documentId": {
           "__rl": true,
           "value": "YOUR_SUNGUARD_SHEET_ID",
-          "mode": "id"
+          "mode": "list",
+          "cachedResultName": "SunGuard_Products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SUNGUARD_SHEET_ID/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
-          "value": "CRM_Leads",
-          "mode": "name"
+          "value": 758615131,
+          "mode": "list",
+          "cachedResultName": "CRM_Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SUNGUARD_SHEET_ID/edit#gid=758615131"
         },
         "options": {}
       },
-      "id": "0000a300-0000-0000-0000-000000000017",
+      "id": "c6763c36-f626-424a-bec6-3e76d94cb360",
       "name": "Read CRM_Leads",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        1100,
-        100
+        1152,
+        528
       ],
+      "executeOnce": true,
       "credentials": {
         "googleSheetsOAuth2Api": {
           "id": "YOUR_CREDENTIAL_ID",
           "name": "YOUR googleSheetsOAuth2Api credential"
         }
-      },
-      "executeOnce": true
+      }
     },
     {
       "parameters": {
-        "jsCode": "const CHAT_ID = 'YOUR_TELEGRAM_CHAT_ID';\nconst PRODUCTS_FOR_TAG = { 'Solar Panel': ['SG-001', 'SG-002'], 'Inverter': ['SG-004'], 'Battery': ['SG-003'],\n  'Hybrid System': ['SG-001', 'SG-002', 'SG-003', 'SG-004'], 'CCTV': ['SG-006', 'SG-007', 'SG-008'] };\nconst LOW_AT = 2;\nconst keyboard = (leadId) => ({ inline_keyboard: [[\n  { text: '✅ Send', callback_data: 'send:' + leadId }, { text: '✏️ Edit', callback_data: 'edit:' + leadId } ]] });\nconst preview = (r, extra) => [\n  `✉️ AI reply draft ${r.Lead_ID} (${String(r.Score || '').toUpperCase()}) — Odoo #${r.Odoo_Lead_ID}`,\n  `To: ${r.Name} <${r.Email}>`, extra || '', `Subject: ${r.Reply_Subject}`, '———', String(r.Reply_Draft).slice(0, 3000), '———',\n  'Tap ✅ Send (goes to the demo inbox) or ✏️ Edit.'].filter(Boolean).join('\\n');\n\n// Decide what each tap does. The sheet makes it safe to repeat: a lead already \"Sent\" is never emailed twice.\nconst DEMO_INBOX = 'YOUR_DEMO_INBOX';\nconst tidy = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [String(k).trim(), v]));\nconst rows = Object.fromEntries($input.all().map(i => tidy(i.json)).filter(r => r.Lead_ID).map(r => [String(r.Lead_ID).trim(), r]));\nconst { actions } = $('Parse Telegram updates').first().json;\nconst now = new Date().toISOString();\nconst ans = (id, text) => id ? [{ tg_method: 'answerCallbackQuery', tg_body: { callback_query_id: id, text } }] : [];\nconst out = [];\nfor (const a of actions) {\n  const r = rows[a.lead];\n  const keep = r ? { Lead_ID: r.Lead_ID, Reply_Status: r.Reply_Status || '', Reply_Subject: r.Reply_Subject || '',\n                     Reply_Draft: r.Reply_Draft || '', Reply_Sent_At: r.Reply_Sent_At || '' } : null;\n  if (a.type === 'ignore' || !r) { out.push({ json: { route: 'other', sheet: null, tg: ans(a.cq_id, r ? 'Unknown button' : 'Lead not found') } }); continue; }\n  const status = String(r.Reply_Status || '').trim();\n  if (status === 'Sent') { out.push({ json: { route: 'other', sheet: null, tg: ans(a.cq_id, 'Already sent ✅') } }); continue; }\n  if (a.type === 'send') {\n    if (status !== 'Awaiting approval') { out.push({ json: { route: 'other', sheet: null, tg: ans(a.cq_id, 'No draft to send') } }); continue; }\n    out.push({ json: { route: 'send',\n      email: { to: DEMO_INBOX, subject: `[DEMO → ${r.Email}] ${r.Reply_Subject}`,\n               text: `${r.Reply_Draft}\\n\\n---\\nDemo mode: in production this email goes to ${r.Name} <${r.Email}>. Lead ${r.Lead_ID}, Odoo #${r.Odoo_Lead_ID}.` },\n      rpc: { model: 'crm.lead', method: 'message_post', args: [[Number(r.Odoo_Lead_ID)]], kwargs: {\n        body: `AI reply approved in Telegram and sent (demo inbox) for ${r.Lead_ID}. Subject: ${r.Reply_Subject}`,\n        message_type: 'comment', subtype_xmlid: 'mail.mt_note' } },\n      sheet: { ...keep, Reply_Status: 'Sent', Reply_Sent_At: now },\n      tg: [...ans(a.cq_id, 'Sent ✅'),\n        ...(a.message_id ? [{ tg_method: 'editMessageReplyMarkup', tg_body: { chat_id: CHAT_ID, message_id: a.message_id, reply_markup: { inline_keyboard: [] } } }] : []),\n        { tg_method: 'sendMessage', tg_body: { chat_id: CHAT_ID, text: `✅ ${r.Lead_ID} sent to the demo inbox (for ${r.Name}). Note added to Odoo #${r.Odoo_Lead_ID}.` } }] } });\n  } else if (a.type === 'edit') {\n    out.push({ json: { route: 'other', sheet: null, tg: [...ans(a.cq_id, 'Send the new text'),\n      { tg_method: 'sendMessage', tg_body: { chat_id: CHAT_ID, text: `✏️ EDIT ${r.Lead_ID}\\nReply to this message with the full new email text.`,\n        reply_markup: { force_reply: true, input_field_placeholder: 'New email text' } } }] } });\n  } else if (a.type === 'edit_text') {\n    const nr = { ...r, Reply_Draft: a.text };\n    out.push({ json: { route: 'other', sheet: { ...keep, Reply_Status: 'Awaiting approval', Reply_Draft: a.text },\n      tg: [{ tg_method: 'sendMessage', tg_body: { chat_id: CHAT_ID, text: preview(nr, '(edited by you)'), reply_markup: keyboard(r.Lead_ID) } }] } });\n  }\n}\nreturn out;"
+        "jsCode": "const CHAT_ID = 'YOUR_TELEGRAM_CHAT_ID';\nconst keyboard = (leadId) => ({ inline_keyboard: [[\n  { text: '✅ Send', callback_data: 'send:' + leadId }, { text: '✏️ Edit', callback_data: 'edit:' + leadId } ]] });\nconst fkeyboard = (leadId) => ({ inline_keyboard: [[\n  { text: '✅ Send', callback_data: 'fsend:' + leadId }, { text: '✏️ Edit', callback_data: 'fedit:' + leadId } ]] });\nconst preview = (r, extra) => [\n  `✉️ AI reply draft ${r.Lead_ID} (${String(r.Score || '').toUpperCase()}) — Odoo #${r.Odoo_Lead_ID}`,\n  `To: ${r.Name} <${r.Email}>`, extra || '', `Subject: ${r.Reply_Subject}`, '———', String(r.Reply_Draft).slice(0, 3000), '———',\n  'Tap ✅ Send (goes to the demo inbox) or ✏️ Edit.'].filter(Boolean).join('\\n');\nconst fpreview = (r, extra) => [\n  `🔁 3-day follow-up draft ${r.Lead_ID} (${String(r.Score || '').toUpperCase()}) — Odoo #${r.Odoo_Lead_ID}`,\n  `To: ${r.Name} <${r.Email}>`, extra || '', `Subject: Re: ${r.Reply_Subject || 'Your SunGuard Solar & CCTV inquiry'}`, '———', String(r.Followup_Draft).slice(0, 3000), '———',\n  'Tap ✅ Send (goes to the demo inbox) or ✏️ Edit.'].filter(Boolean).join('\\n');\n\nconst DEMO_INBOX = 'YOUR_DEMO_INBOX';\nconst tidy = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [String(k).trim(), v]));\nconst rows = Object.fromEntries($input.all().map(i => tidy(i.json)).filter(r => r.Lead_ID).map(r => [String(r.Lead_ID).trim(), r]));\nconst { actions } = $('Parse Telegram updates').first().json;\nconst now = new Date().toISOString();\nconst ans = (id, text) => id ? [{ tg_method: 'answerCallbackQuery', tg_body: { callback_query_id: id, text } }] : [];\nconst out = [];\n\nfor (const a of actions) {\n  const r = rows[a.lead];\n  if (a.type === 'ignore' || !r) {\n    out.push({ json: { route: 'other', sheet: null, sheet_followup: null, tg: ans(a.cq_id, r ? 'Unknown button' : 'Lead not found') } });\n    continue;\n  }\n\n  // Initial reply actions (send / edit / edit_text)\n  if (['send', 'edit', 'edit_text'].includes(a.type)) {\n    const keep = { Lead_ID: r.Lead_ID, Reply_Status: r.Reply_Status || '', Reply_Subject: r.Reply_Subject || '',\n                   Reply_Draft: r.Reply_Draft || '', Reply_Sent_At: r.Reply_Sent_At || '' };\n    const status = String(r.Reply_Status || '').trim();\n    if (status === 'Sent') { out.push({ json: { route: 'other', sheet: null, sheet_followup: null, tg: ans(a.cq_id, 'Already sent ✅') } }); continue; }\n    if (a.type === 'send') {\n      if (status !== 'Awaiting approval') { out.push({ json: { route: 'other', sheet: null, sheet_followup: null, tg: ans(a.cq_id, 'No draft to send') } }); continue; }\n      out.push({ json: { route: 'send',\n        email: { to: DEMO_INBOX, subject: `[DEMO → ${r.Email}] ${r.Reply_Subject}`,\n                 text: `${r.Reply_Draft}\\n\\n---\\nDemo mode: in production this email goes to ${r.Name} <${r.Email}>. Lead ${r.Lead_ID}, Odoo #${r.Odoo_Lead_ID}.` },\n        rpc: { model: 'crm.lead', method: 'message_post', args: [[Number(r.Odoo_Lead_ID)]], kwargs: {\n          body: `AI reply approved in Telegram and sent (demo inbox) for ${r.Lead_ID}. Subject: ${r.Reply_Subject}`,\n          message_type: 'comment', subtype_xmlid: 'mail.mt_note' } },\n        sheet: { ...keep, Reply_Status: 'Sent', Reply_Sent_At: now },\n        sheet_followup: null,\n        tg: [...ans(a.cq_id, 'Sent ✅'),\n          ...(a.message_id ? [{ tg_method: 'editMessageReplyMarkup', tg_body: { chat_id: CHAT_ID, message_id: a.message_id, reply_markup: { inline_keyboard: [] } } }] : []),\n          { tg_method: 'sendMessage', tg_body: { chat_id: CHAT_ID, text: `✅ ${r.Lead_ID} sent to the demo inbox (for ${r.Name}). Note added to Odoo #${r.Odoo_Lead_ID}.` } }] } });\n    } else if (a.type === 'edit') {\n      out.push({ json: { route: 'other', sheet: null, sheet_followup: null, tg: [...ans(a.cq_id, 'Send the new text'),\n        { tg_method: 'sendMessage', tg_body: { chat_id: CHAT_ID, text: `✏️ EDIT ${r.Lead_ID}\\nReply to this message with the full new email text.`,\n          reply_markup: { force_reply: true, input_field_placeholder: 'New email text' } } }] } });\n    } else if (a.type === 'edit_text') {\n      const nr = { ...r, Reply_Draft: a.text };\n      out.push({ json: { route: 'other', sheet: { ...keep, Reply_Status: 'Awaiting approval', Reply_Draft: a.text }, sheet_followup: null,\n        tg: [{ tg_method: 'sendMessage', tg_body: { chat_id: CHAT_ID, text: preview(nr, '(edited by you)'), reply_markup: keyboard(r.Lead_ID) } }] } });\n    }\n    continue;\n  }\n\n  // 3-day follow-up actions (fsend / fedit / fedit_text)\n  const fkeep = { Lead_ID: r.Lead_ID, Followup_Status: r.Followup_Status || '', Followup_Draft: r.Followup_Draft || '', Followup_Sent_At: r.Followup_Sent_At || '' };\n  const fstatus = String(r.Followup_Status || '').trim();\n  if (fstatus === 'Sent') { out.push({ json: { route: 'other', sheet: null, sheet_followup: null, tg: ans(a.cq_id, 'Follow-up already sent ✅') } }); continue; }\n  if (a.type === 'fsend') {\n    if (fstatus !== 'Awaiting approval') { out.push({ json: { route: 'other', sheet: null, sheet_followup: null, tg: ans(a.cq_id, 'No follow-up draft to send') } }); continue; }\n    const subj = r.Reply_Subject ? `Re: ${r.Reply_Subject}` : 'Follow-up: SunGuard Solar & CCTV';\n    out.push({ json: { route: 'send',\n      email: { to: DEMO_INBOX, subject: `[DEMO → ${r.Email}] ${subj}`,\n               text: `${r.Followup_Draft}\\n\\n---\\nDemo mode: in production this follow-up goes to ${r.Name} <${r.Email}>. Lead ${r.Lead_ID}, Odoo #${r.Odoo_Lead_ID}.` },\n      rpc: { model: 'crm.lead', method: 'message_post', args: [[Number(r.Odoo_Lead_ID)]], kwargs: {\n        body: `3-day follow-up approved in Telegram and sent (demo inbox) for ${r.Lead_ID}. Subject: ${subj}`,\n        message_type: 'comment', subtype_xmlid: 'mail.mt_note' } },\n      sheet: null,\n      sheet_followup: { ...fkeep, Followup_Status: 'Sent', Followup_Sent_At: now },\n      tg: [...ans(a.cq_id, 'Follow-up sent ✅'),\n        ...(a.message_id ? [{ tg_method: 'editMessageReplyMarkup', tg_body: { chat_id: CHAT_ID, message_id: a.message_id, reply_markup: { inline_keyboard: [] } } }] : []),\n        { tg_method: 'sendMessage', tg_body: { chat_id: CHAT_ID, text: `✅ Follow-up ${r.Lead_ID} sent to the demo inbox (for ${r.Name}). Note added to Odoo #${r.Odoo_Lead_ID}.` } }] } });\n  } else if (a.type === 'fedit') {\n    out.push({ json: { route: 'other', sheet: null, sheet_followup: null, tg: [...ans(a.cq_id, 'Send the new follow-up text'),\n      { tg_method: 'sendMessage', tg_body: { chat_id: CHAT_ID, text: `✏️ EDIT FOLLOW-UP ${r.Lead_ID}\\nReply to this message with the full new follow-up text.`,\n        reply_markup: { force_reply: true, input_field_placeholder: 'New follow-up text' } } }] } });\n  } else if (a.type === 'fedit_text') {\n    const nr = { ...r, Followup_Draft: a.text };\n    out.push({ json: { route: 'other', sheet: null, sheet_followup: { ...fkeep, Followup_Status: 'Awaiting approval', Followup_Draft: a.text },\n      tg: [{ tg_method: 'sendMessage', tg_body: { chat_id: CHAT_ID, text: fpreview(nr, '(edited by you)'), reply_markup: fkeyboard(r.Lead_ID) } }] } });\n  }\n}\nreturn out;"
       },
-      "id": "0000a300-0000-0000-0000-000000000018",
+      "id": "33bb5549-d152-488a-8418-659cf5200a60",
       "name": "Plan actions",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1320,
-        100
+        1360,
+        528
       ]
     },
     {
@@ -180,7 +182,8 @@
           "options": {
             "caseSensitive": true,
             "leftValue": "",
-            "typeValidation": "strict"
+            "typeValidation": "strict",
+            "version": 1
           },
           "conditions": [
             {
@@ -197,13 +200,13 @@
         },
         "options": {}
       },
-      "id": "0000a300-0000-0000-0000-00000000001a",
+      "id": "0bfea61e-6108-4d6a-b550-95a0d097cf65",
       "name": "Is it a Send?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        1540,
-        100
+        1584,
+        528
       ]
     },
     {
@@ -216,13 +219,13 @@
           "appendAttribution": false
         }
       },
-      "id": "0000a300-0000-0000-0000-00000000001b",
+      "id": "edf5ae60-ddea-4b8b-8e63-7735a41f0002",
       "name": "Gmail: send to demo inbox",
       "type": "n8n-nodes-base.gmail",
       "typeVersion": 2.2,
       "position": [
-        1760,
-        -40
+        1808,
+        384
       ],
       "credentials": {
         "gmailOAuth2": {
@@ -235,13 +238,13 @@
       "parameters": {
         "jsCode": "const cfgRes = $('Odoo: get config').first().json;\nif (cfgRes.error || !cfgRes.result) throw new Error('Odoo config not found. Check ODOO_* env vars and sunguard_crm.ids.');\nconst cfg = JSON.parse(cfgRes.result);\nconst context = { allowed_company_ids: [cfg.company_id] };\n\nconst plan = $('Is it a Send?').all(0);\nreturn $input.all().map((it, i) => ({ json: { rpc: { ...plan[i].json.rpc, kwargs: { ...plan[i].json.rpc.kwargs, context } } } }));"
       },
-      "id": "0000a300-0000-0000-0000-00000000001c",
+      "id": "f00ac914-5389-4b80-baf8-7eb90261d68d",
       "name": "Odoo note request",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1980,
-        -40
+        2032,
+        384
       ]
     },
     {
@@ -255,13 +258,13 @@
           "timeout": 30000
         }
       },
-      "id": "0000a300-0000-0000-0000-00000000001d",
+      "id": "5c07c9c2-9ddc-497f-ab13-086fe3c43043",
       "name": "Odoo: add note (reply sent)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2200,
-        -40
+        2240,
+        384
       ],
       "onError": "continueRegularOutput"
     },
@@ -269,26 +272,26 @@
       "parameters": {
         "jsCode": "// Back to the plan items of the send branch (same order as the Gmail and Odoo calls).\nconst plan = $('Is it a Send?').all(0);\nreturn $input.all().map((it, i) => {\n  if (it.json.error) throw new Error('Odoo note failed: ' + JSON.stringify(it.json.error).slice(0, 200));\n  return { json: plan[i].json };\n});"
       },
-      "id": "0000a300-0000-0000-0000-00000000001e",
+      "id": "d5051e56-af18-4f0c-9500-55287f0d82ff",
       "name": "Back to plan",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2420,
-        -40
+        2464,
+        384
       ]
     },
     {
       "parameters": {
         "jsCode": "return $input.all().filter(i => i.json.sheet).map(i => ({ json: i.json.sheet }));"
       },
-      "id": "0000a300-0000-0000-0000-00000000001f",
+      "id": "b8a33e75-f368-4cbe-a55f-fbab037f0887",
       "name": "Sheet updates",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2660,
-        0
+        2704,
+        432
       ]
     },
     {
@@ -297,12 +300,16 @@
         "documentId": {
           "__rl": true,
           "value": "YOUR_SUNGUARD_SHEET_ID",
-          "mode": "id"
+          "mode": "list",
+          "cachedResultName": "SunGuard_Products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SUNGUARD_SHEET_ID/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
-          "value": "CRM_Leads",
-          "mode": "name"
+          "value": 758615131,
+          "mode": "list",
+          "cachedResultName": "CRM_Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SUNGUARD_SHEET_ID/edit#gid=758615131"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -324,7 +331,128 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "City",
+              "displayName": "City",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Consent",
+              "displayName": "Consent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Odoo_Lead_ID",
+              "displayName": "Odoo_Lead_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Processed_At",
+              "displayName": "Processed_At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Error",
+              "displayName": "Error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
             },
             {
               "id": "Reply_Status",
@@ -333,7 +461,8 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": false
             },
             {
               "id": "Reply_Subject",
@@ -342,7 +471,8 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": false
             },
             {
               "id": "Reply_Draft",
@@ -351,7 +481,8 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": false
             },
             {
               "id": "Reply_Sent_At",
@@ -360,7 +491,19 @@
               "defaultMatch": false,
               "display": true,
               "type": "string",
-              "canBeUsedToMatch": true
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": false
             }
           ],
           "attemptToConvertTypes": false,
@@ -368,13 +511,13 @@
         },
         "options": {}
       },
-      "id": "0000a300-0000-0000-0000-000000000020",
+      "id": "6c439415-287e-490b-874e-dd940728dd63",
       "name": "Update CRM_Leads reply",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4.7,
       "position": [
-        2880,
-        0
+        2928,
+        432
       ],
       "credentials": {
         "googleSheetsOAuth2Api": {
@@ -387,13 +530,13 @@
       "parameters": {
         "jsCode": "return $input.all().flatMap(i => (i.json.tg || []).map(t => ({ json: t })));"
       },
-      "id": "0000a300-0000-0000-0000-000000000021",
+      "id": "ebd7c411-c1cd-49e4-940e-1884aaea2516",
       "name": "Telegram calls",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2660,
-        240
+        2704,
+        672
       ]
     },
     {
@@ -404,42 +547,146 @@
         "specifyBody": "json",
         "jsonBody": "={{ $json.tg_body }}",
         "options": {
-          "timeout": 20000,
           "batching": {
             "batch": {
               "batchSize": 1,
               "batchInterval": 300
             }
-          }
+          },
+          "timeout": 20000
         }
       },
-      "id": "0000a300-0000-0000-0000-000000000022",
+      "id": "8f45417b-2b39-4d4f-b149-a2ec41e92aeb",
       "name": "Telegram: reply",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2880,
-        240
+        2928,
+        672
       ],
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
         "content": "## A3b Telegram Approvals\nEvery minute: asks the approval bot for new taps (polling, so it works on localhost) → only YOUR chat is accepted.\n**✅ Send** → Gmail to the **demo inbox** (subject shows the real customer) → note on the Odoo lead → sheet **Reply_Status = Sent** → buttons removed.\n**✏️ Edit** → bot asks you to reply with new text → new preview with buttons.\nA lead already Sent is never emailed twice.\nIf you see error 409: another trigger/webhook uses this bot; use a separate bot.",
-        "width": 620,
         "height": 320,
+        "width": 620,
         "color": 5
       },
-      "id": "0000a300-0000-0000-0000-000000000023",
+      "id": "d5fa7e85-fa8f-482b-9903-7d2581916c0d",
       "name": "README",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -40,
-        -420
+        0,
+        0
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().filter(i => i.json.sheet_followup).map(i => ({ json: i.json.sheet_followup }));"
+      },
+      "id": "522a5f93-2844-4c23-b327-c5b6f2ff0c9b",
+      "name": "Followup sheet updates",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2704,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SUNGUARD_SHEET_ID",
+          "mode": "list",
+          "cachedResultName": "SunGuard_Products",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SUNGUARD_SHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 758615131,
+          "mode": "list",
+          "cachedResultName": "CRM_Leads",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SUNGUARD_SHEET_ID/edit#gid=758615131"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Lead_ID": "={{ $json.Lead_ID }}",
+            "Followup_Status": "={{ $json.Followup_Status }}",
+            "Followup_Draft": "={{ $json.Followup_Draft }}",
+            "Followup_Sent_At": "={{ $json.Followup_Sent_At }}"
+          },
+          "matchingColumns": [
+            "Lead_ID"
+          ],
+          "schema": [
+            {
+              "id": "Lead_ID",
+              "displayName": "Lead_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup_Status",
+              "displayName": "Followup_Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup_Draft",
+              "displayName": "Followup_Draft",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Followup_Sent_At",
+              "displayName": "Followup_Sent_At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "596099bf-e811-4dfc-bdb8-975f5a96b0b1",
+      "name": "Update CRM_Leads follow-up",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2928,
+        240
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR googleSheetsOAuth2Api credential"
+        }
+      }
     }
   ],
+  "pinData": {},
   "connections": {
     "Every minute": {
       "main": [
@@ -548,6 +795,11 @@
             "node": "Telegram calls",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Followup sheet updates",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -597,6 +849,11 @@
             "node": "Telegram calls",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Followup sheet updates",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -622,15 +879,26 @@
           }
         ]
       ]
+    },
+    "Followup sheet updates": {
+      "main": [
+        [
+          {
+            "node": "Update CRM_Leads follow-up",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate"
   },
-  "pinData": {},
-  "meta": {
-    "templateCredsSetupCompleted": true
-  },
+  "versionId": "79732a98-f49d-4a65-a4d4-9f2c2e6734c2",
+  "meta": {},
+  "nodeGroups": [],
   "tags": []
 }

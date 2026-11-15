@@ -74,6 +74,19 @@ Max 10 leads per run, 4 s apart (Gemini free-tier friendly). Products and number
 2. In Odoo, move 2 SunGuard leads to **Qualified** → run **A2** → 2 ClickUp tasks.
 3. Mark 1 task **Complete** → run **A2** → that lead is in **Proposition** with the note "Site survey done …".
 
+## Phase 2 — AI reply, follow-up and Sales Order (human-approved)
+
+| Workflow | Trigger | What it does |
+|---|---|---|
+| **A3a AI Reply Drafter** | every 5 min | Hot/Warm leads → Odoo stock of the products asked (≤2 = LOW) → Gemini draft (no prices, no dates, no product codes) → sheet `Awaiting approval` → approval bot with ✅ Send / ✏️ Edit |
+| **A3b Telegram Approvals** | every 1 min | Single `getUpdates` poller (works on localhost) for replies (`send:`/`edit:`) and follow-ups (`fsend:`/`fedit:`). Send → Gmail demo inbox + Odoo note + sheet `Sent`. Edit → asks for new text → new preview. Never emails twice. |
+| **A4 3-Day Follow-up** | every 60 min | Replies sent > 3 days ago (`TEST_DAYS`), no follow-up yet, lead still New/Qualified → Gemini follow-up → approval bot |
+| **A5 Won → Sales Order** | every 15 min | Won lead → find/create the customer (fixes the Contact field) → **draft** sale order `CRM-<lead id>` (never duplicated, never auto-confirmed) → Odoo note + 🏆 Telegram alert |
+
+Extra sheet columns: `Reply_Status | Reply_Subject | Reply_Draft | Reply_Sent_At | Followup_Status | Followup_Draft | Followup_Sent_At`. New env var: `TG_APPROVAL_TOKEN` (separate approval bot).
+
+Tested: AI wrongly said "limited stock" for a product with 7 units; the draft was fixed with ✏️ Edit before sending — the reason every customer email needs approval.
+
 ## Later phases (not built)
 Phase 2: stock check, AI reply drafter with Telegram Send/Edit buttons, 3-day follow-up, Won → Sales Order.
 Phase 3: Meralco bill reader (Textract), review sentiment "At risk", Looker Studio dashboard, Maris daily report.

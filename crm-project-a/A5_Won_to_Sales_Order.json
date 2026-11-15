@@ -1,0 +1,645 @@
+{
+  "name": "A5 Won → Sales Order (+ Contact fix)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 15
+            }
+          ]
+        }
+      },
+      "id": "37a78b90-9460-44db-9794-fe36ad8d3292",
+      "name": "Every 15 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        48,
+        400
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "406540c1-4a82-4680-9936-4a2edfe55f28",
+      "name": "Manual test",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        48,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/jsonrpc",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $env.ODOO_DB, Number($env.ODOO_UID), $env.ODOO_API_KEY, 'ir.config_parameter', 'get_param', ['sunguard_crm.ids'], {} ] } } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "0fb8f89a-749a-42f2-accb-5ec2398268d7",
+      "name": "Odoo: get config",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        272,
+        512
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfgRes = $('Odoo: get config').first().json;\nif (cfgRes.error || !cfgRes.result) throw new Error('Odoo config not found. Check ODOO_* env vars and sunguard_crm.ids.');\nconst cfg = JSON.parse(cfgRes.result);\nconst context = { allowed_company_ids: [cfg.company_id] };\n\nreturn [{\n  json: {\n    rpc: {\n      model: 'crm.lead',\n      method: 'search_read',\n      args: [[['company_id', '=', cfg.company_id], ['stage_id', '=', cfg.stage_ids.Won]]],\n      kwargs: { fields: ['id', 'name', 'contact_name', 'email_from', 'phone', 'city', 'partner_id', 'tag_ids', 'x_lead_ref'], limit: 20, context }\n    }\n  }\n}];"
+      },
+      "id": "2929c67d-7af5-4b4d-a1d1-86a7bfc67076",
+      "name": "Find Won leads",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/jsonrpc",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $env.ODOO_DB, Number($env.ODOO_UID), $env.ODOO_API_KEY, $json.rpc.model, $json.rpc.method, $json.rpc.args, $json.rpc.kwargs || {} ] } } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "a0f28162-365f-44f0-aab7-8db4e53c6672",
+      "name": "Odoo: Won leads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        704,
+        512
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = JSON.parse($('Odoo: get config').first().json.result);\nconst context = { allowed_company_ids: [cfg.company_id] };\nconst res = $input.first().json;\nif (res.error) throw new Error('Odoo Won leads: ' + (res.error.data?.message || res.error.message));\nconst leads = res.result || [];\nif (!leads.length) return [];\n\nconst refs = leads.map(l => 'CRM-' + l.id);\nreturn [{\n  json: {\n    leads,\n    rpc: {\n      model: 'sale.order',\n      method: 'search_read',\n      args: [[['company_id', '=', cfg.company_id], ['client_order_ref', 'in', refs]]],\n      kwargs: { fields: ['id', 'name', 'client_order_ref'], context }\n    }\n  }\n}];"
+      },
+      "id": "ee1ae399-4f38-4077-b6f9-975f243fed5f",
+      "name": "Check existing SOs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        928,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/jsonrpc",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $env.ODOO_DB, Number($env.ODOO_UID), $env.ODOO_API_KEY, $json.rpc.model, $json.rpc.method, $json.rpc.args, $json.rpc.kwargs || {} ] } } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "ba715268-0218-4691-8fd0-1850a781fcd9",
+      "name": "Odoo: existing SOs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1152,
+        512
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = JSON.parse($('Odoo: get config').first().json.result);\nconst context = { allowed_company_ids: [cfg.company_id] };\nconst soRes = $input.first().json;\nif (soRes.error) throw new Error('Odoo existing SOs: ' + (soRes.error.data?.message || soRes.error.message));\nconst existingRefs = new Set((soRes.result || []).map(s => s.client_order_ref));\nconst leads = $('Check existing SOs').first().json.leads.filter(l => !existingRefs.has('CRM-' + l.id));\nif (!leads.length) return [];\n\nreturn [{\n  json: {\n    leads,\n    rpc: {\n      model: 'product.product',\n      method: 'search_read',\n      args: [[['company_id', '=', cfg.company_id]]],\n      kwargs: { fields: ['id', 'default_code', 'name', 'list_price'], context }\n    }\n  }\n}];"
+      },
+      "id": "1d16ad7a-b1b1-430b-9394-cea39b579915",
+      "name": "Fetch SunGuard products",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1376,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/jsonrpc",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $env.ODOO_DB, Number($env.ODOO_UID), $env.ODOO_API_KEY, $json.rpc.model, $json.rpc.method, $json.rpc.args, $json.rpc.kwargs || {} ] } } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "a5d1e102-60cb-415c-b850-c377830f6685",
+      "name": "Odoo: SunGuard products",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1600,
+        512
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = JSON.parse($('Odoo: get config').first().json.result);\nconst context = { allowed_company_ids: [cfg.company_id] };\nconst prodRes = $input.first().json;\nif (prodRes.error) throw new Error('Odoo products: ' + (prodRes.error.data?.message || prodRes.error.message));\n\nconst PRODUCTS_FOR_TAG = {\n  'Solar Panel': ['SG-001', 'SG-002'],\n  'Inverter': ['SG-004'],\n  'Battery': ['SG-003'],\n  'Hybrid System': ['SG-001', 'SG-002', 'SG-003', 'SG-004'],\n  'CCTV': ['SG-006', 'SG-007', 'SG-008']\n};\nconst tagName = Object.fromEntries(Object.entries(cfg.tag_ids).map(([k, v]) => [v, k]));\nconst byCode = Object.fromEntries((prodRes.result || []).map(p => [p.default_code, p]));\nconst leads = $('Fetch SunGuard products').first().json.leads;\nconst noop = { model: 'res.partner', method: 'search_read', args: [[['id', '=', 0]]], kwargs: { fields: ['id'], limit: 1, context } };\n\nreturn leads.map(l => {\n  const tags = (l.tag_ids || []).map(t => tagName[t]).filter(t => PRODUCTS_FOR_TAG[t]);\n  const codes = [...new Set(tags.flatMap(t => PRODUCTS_FOR_TAG[t]))];\n  const order_line = codes.map(c => byCode[c]).filter(Boolean).map(p => [0, 0, {\n    product_id: p.id,\n    product_uom_qty: 1,\n    price_unit: p.list_price\n  }]);\n  const existingPartnerId = Array.isArray(l.partner_id) ? l.partner_id[0] : (l.partner_id || null);\n  const email = String(l.email_from || '').trim();\n  const domain = existingPartnerId\n    ? null\n    : (email ? [['email', '=ilike', email], '|', ['company_id', '=', cfg.company_id], ['company_id', '=', false]]\n             : [['name', '=ilike', String(l.contact_name || l.name).trim()], '|', ['company_id', '=', cfg.company_id], ['company_id', '=', false]]);\n  return {\n    json: {\n      lead: l,\n      existingPartnerId,\n      order_line,\n      rpc: domain\n        ? { model: 'res.partner', method: 'search_read', args: [domain], kwargs: { fields: ['id', 'name'], limit: 1, context } }\n        : noop\n    }\n  };\n});"
+      },
+      "id": "357d3352-a070-4b04-82cc-464013e2eec2",
+      "name": "Prepare partner search",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1824,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/jsonrpc",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $env.ODOO_DB, Number($env.ODOO_UID), $env.ODOO_API_KEY, $json.rpc.model, $json.rpc.method, $json.rpc.args, $json.rpc.kwargs || {} ] } } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "5b6a8700-93d3-456f-998f-d05988ad25d7",
+      "name": "Odoo: find partner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2048,
+        512
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = JSON.parse($('Odoo: get config').first().json.result);\nconst context = { allowed_company_ids: [cfg.company_id] };\nconst src = $('Prepare partner search').all();\nconst noop = { model: 'res.partner', method: 'search', args: [[['id', '=', 0]]], kwargs: { limit: 1, context } };\n\nreturn $input.all().map((it, i) => {\n  const d = src[i].json;\n  const r = it.json || {};\n  if (r.error) throw new Error('Odoo partner search: ' + (r.error.data?.message || r.error.message));\n  const foundId = d.existingPartnerId || (r.result && r.result[0] ? r.result[0].id : null);\n  if (foundId) {\n    return { json: { ...d, foundPartnerId: foundId, created: false, rpc: noop } };\n  }\n  const l = d.lead;\n  return {\n    json: {\n      ...d,\n      foundPartnerId: null,\n      created: true,\n      rpc: {\n        model: 'res.partner',\n        method: 'create',\n        args: [{\n          name: String(l.contact_name || l.name || 'Customer').trim(),\n          email: l.email_from ? String(l.email_from).trim() : false,\n          phone: l.phone ? String(l.phone).trim() : false,\n          city: l.city ? String(l.city).trim() : false,\n          company_id: cfg.company_id\n        }],\n        kwargs: { context }\n      }\n    }\n  };\n});"
+      },
+      "id": "34ce74cb-f1a0-4ba4-ad97-b5100083fca0",
+      "name": "Prepare partner create",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2272,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/jsonrpc",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $env.ODOO_DB, Number($env.ODOO_UID), $env.ODOO_API_KEY, $json.rpc.model, $json.rpc.method, $json.rpc.args, $json.rpc.kwargs || {} ] } } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "bbad66cd-ae25-488b-ae5f-30a139d513b3",
+      "name": "Odoo: create partner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2496,
+        512
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = JSON.parse($('Odoo: get config').first().json.result);\nconst context = { allowed_company_ids: [cfg.company_id] };\nconst src = $('Prepare partner create').all();\nconst noop = { model: 'crm.lead', method: 'search', args: [[['id', '=', 0]]], kwargs: { limit: 1, context } };\n\nreturn $input.all().map((it, i) => {\n  const d = src[i].json;\n  const r = it.json || {};\n  if (r.error) throw new Error('Odoo partner create: ' + (r.error.data?.message || r.error.message));\n  const partnerId = d.created ? r.result : d.foundPartnerId;\n  const needsLink = !d.existingPartnerId || d.existingPartnerId !== partnerId;\n  return {\n    json: {\n      ...d,\n      partnerId,\n      rpc: needsLink\n        ? { model: 'crm.lead', method: 'write', args: [[d.lead.id], { partner_id: partnerId }], kwargs: { context } }\n        : noop\n    }\n  };\n});"
+      },
+      "id": "a095cc6b-dac0-4150-aa55-3b96a43d0343",
+      "name": "Link partner on lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2720,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/jsonrpc",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $env.ODOO_DB, Number($env.ODOO_UID), $env.ODOO_API_KEY, $json.rpc.model, $json.rpc.method, $json.rpc.args, $json.rpc.kwargs || {} ] } } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "cacf8088-45be-418a-8b77-71b37190f0eb",
+      "name": "Odoo: link partner",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2944,
+        512
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = JSON.parse($('Odoo: get config').first().json.result);\nconst context = { allowed_company_ids: [cfg.company_id] };\nconst src = $('Link partner on lead').all();\n\nreturn $input.all().map((it, i) => {\n  const d = src[i].json;\n  const r = it.json || {};\n  if (r.error) throw new Error('Odoo link partner: ' + (r.error.data?.message || r.error.message));\n  return {\n    json: {\n      ...d,\n      rpc: {\n        model: 'sale.order',\n        method: 'create',\n        args: [{\n          partner_id: d.partnerId,\n          company_id: cfg.company_id,\n          opportunity_id: d.lead.id,\n          client_order_ref: 'CRM-' + d.lead.id,\n          order_line: d.order_line\n        }],\n        kwargs: { context }\n      }\n    }\n  };\n});"
+      },
+      "id": "0d49e2ed-3834-4a61-b1ba-fc33996710f0",
+      "name": "Prepare draft SO",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3168,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/jsonrpc",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $env.ODOO_DB, Number($env.ODOO_UID), $env.ODOO_API_KEY, $json.rpc.model, $json.rpc.method, $json.rpc.args, $json.rpc.kwargs || {} ] } } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "725b827f-efcd-447b-8d53-90c1ec4bf665",
+      "name": "Odoo: create draft SO",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3392,
+        512
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = JSON.parse($('Odoo: get config').first().json.result);\nconst context = { allowed_company_ids: [cfg.company_id] };\nconst src = $('Prepare draft SO').all();\n\nreturn $input.all().map((it, i) => {\n  const d = src[i].json;\n  const r = it.json || {};\n  if (r.error || !r.result) throw new Error('Odoo create SO: ' + JSON.stringify(r.error || r).slice(0, 200));\n  return {\n    json: {\n      ...d,\n      soId: r.result,\n      rpc: {\n        model: 'sale.order',\n        method: 'search_read',\n        args: [[['id', '=', r.result]]],\n        kwargs: { fields: ['id', 'name'], limit: 1, context }\n      }\n    }\n  };\n});"
+      },
+      "id": "19d80725-e0a1-4a0f-b09a-eab89233cd57",
+      "name": "Read SO name",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3616,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/jsonrpc",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $env.ODOO_DB, Number($env.ODOO_UID), $env.ODOO_API_KEY, $json.rpc.model, $json.rpc.method, $json.rpc.args, $json.rpc.kwargs || {} ] } } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "1200da61-ba47-451f-b60a-1aac0f0619f8",
+      "name": "Odoo: get SO name",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3840,
+        512
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const cfg = JSON.parse($('Odoo: get config').first().json.result);\nconst context = { allowed_company_ids: [cfg.company_id] };\nconst src = $('Read SO name').all();\n\nreturn $input.all().map((it, i) => {\n  const d = src[i].json;\n  const r = it.json || {};\n  if (r.error) throw new Error('Odoo get SO name: ' + (r.error.data?.message || r.error.message));\n  const soName = r.result && r.result[0] ? r.result[0].name : ('SO #' + d.soId);\n  const customer = String(d.lead.contact_name || d.lead.name || 'Customer').trim();\n  const ref = d.lead.x_lead_ref ? String(d.lead.x_lead_ref).trim() : ('Odoo #' + d.lead.id);\n  const alert = `🏆 WON ${ref} — Draft SO ${soName} created for ${customer}`;\n  return {\n    json: {\n      alert,\n      rpc: {\n        model: 'crm.lead',\n        method: 'message_post',\n        args: [[d.lead.id]],\n        kwargs: {\n          body: `Draft Sales Order ${soName} created for ${customer} (ref CRM-${d.lead.id}).`,\n          message_type: 'comment',\n          subtype_xmlid: 'mail.mt_note',\n          context\n        }\n      }\n    }\n  };\n});"
+      },
+      "id": "17d0fa56-d246-4d1c-a364-ce096dc6beb2",
+      "name": "Prepare lead note & alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4064,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ODOO_URL }}/jsonrpc",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { jsonrpc: '2.0', method: 'call', params: { service: 'object', method: 'execute_kw', args: [ $env.ODOO_DB, Number($env.ODOO_UID), $env.ODOO_API_KEY, $json.rpc.model, $json.rpc.method, $json.rpc.args, $json.rpc.kwargs || {} ] } } }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "6a4691f3-15c2-43a5-b6a1-93925328dfd9",
+      "name": "Odoo: add note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4288,
+        512
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "={{ $('Prepare lead note & alert').item.json.alert }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "35970058-f08a-4c6f-af3e-5599fd456c1e",
+      "name": "Telegram alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        4512,
+        512
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR telegramApi credential"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## A5 Won → Sales Order (+ Contact fix)\nEvery 15 min: SunGuard leads in stage **Won** with no Sales Order yet (`client_order_ref = 'CRM-<lead_id>'`).\n1. Finds or creates `res.partner` by email in company SunGuard and links `partner_id` on the lead.\n2. Creates a **draft** `sale.order` with 1 line per product tag (qty 1, Odoo list price). Never auto-confirms.\n3. Adds an Odoo note + sends Telegram alert (`🏆 WON ...`).",
+        "height": 260,
+        "width": 620,
+        "color": 5
+      },
+      "id": "37115eeb-e181-4d5e-b142-fa90f48ef1dc",
+      "name": "README",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Every 15 minutes": {
+      "main": [
+        [
+          {
+            "node": "Odoo: get config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual test": {
+      "main": [
+        [
+          {
+            "node": "Odoo: get config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: get config": {
+      "main": [
+        [
+          {
+            "node": "Find Won leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Won leads": {
+      "main": [
+        [
+          {
+            "node": "Odoo: Won leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: Won leads": {
+      "main": [
+        [
+          {
+            "node": "Check existing SOs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check existing SOs": {
+      "main": [
+        [
+          {
+            "node": "Odoo: existing SOs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: existing SOs": {
+      "main": [
+        [
+          {
+            "node": "Fetch SunGuard products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch SunGuard products": {
+      "main": [
+        [
+          {
+            "node": "Odoo: SunGuard products",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: SunGuard products": {
+      "main": [
+        [
+          {
+            "node": "Prepare partner search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare partner search": {
+      "main": [
+        [
+          {
+            "node": "Odoo: find partner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: find partner": {
+      "main": [
+        [
+          {
+            "node": "Prepare partner create",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare partner create": {
+      "main": [
+        [
+          {
+            "node": "Odoo: create partner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: create partner": {
+      "main": [
+        [
+          {
+            "node": "Link partner on lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Link partner on lead": {
+      "main": [
+        [
+          {
+            "node": "Odoo: link partner",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: link partner": {
+      "main": [
+        [
+          {
+            "node": "Prepare draft SO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare draft SO": {
+      "main": [
+        [
+          {
+            "node": "Odoo: create draft SO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: create draft SO": {
+      "main": [
+        [
+          {
+            "node": "Read SO name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read SO name": {
+      "main": [
+        [
+          {
+            "node": "Odoo: get SO name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: get SO name": {
+      "main": [
+        [
+          {
+            "node": "Prepare lead note & alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare lead note & alert": {
+      "main": [
+        [
+          {
+            "node": "Odoo: add note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Odoo: add note": {
+      "main": [
+        [
+          {
+            "node": "Telegram alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "401f9ec2-08b3-497e-a032-7eeda329ed28",
+  "meta": {},
+  "nodeGroups": [],
+  "tags": []
+}
